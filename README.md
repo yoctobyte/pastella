@@ -26,23 +26,19 @@ Spine working. The content-addressed anti-entropy core runs both ways:
 - `src/pastella_node.pas` + `run_ring.sh` — a real async NODE; run N as separate
   processes and a gossip ring converges over real TCP (multi-CPU via the OS).
 
-Next: identity (needs ECDSA-P256 signing in the pxx RTL — a frank2 gap), then
-trust, messaging policies, discovery, and the ESP32 swarm.
+Run the whole suite: `FRANK2=/path/to/frank2 ./run_tests.sh` (9/9 green).
 
-See **[DESIGN.md](DESIGN.md)** for the architecture, the layer plan, the mapping
-to pxx/PAL primitives, and the known gaps (notably: ECDSA-P256 signing must be
-added to the pxx RTL for the identity layer).
+Proven end to end:
+- **async** — coroutine reactor (pxx scheduler, epoll)
+- **multithreading** — reactor-per-core (per-thread scheduler); `pastella_mt`
+  runs 6 peers across 3 OS threads, converges
+- **P2P protocol** — content-addressed offer/fetch gossip
+- **zero-seed auto-discovery** — UDP broadcast beacons; nodes self-assemble with
+  no peer list (`test_discovery`)
+- **file transfer** — 256 KB object across a 5-node line, hash-verified per hop
+- **routing** — TTL-flood directed delivery, only the destination delivers
+- **NAT traversal** — rendezvous connect-back for an inbound-unreachable peer
+- **multi-process** — independent node processes gossip over real TCP
 
-## Build
-
-```sh
-FRANK2=/path/to/frank2 ./build.sh src/spike_udp.pas
-build/spike_udp
-```
-
-Requires a [frankonpiler](https://github.com/) (frank2) checkout for the pxx
-compiler and PAL RTL.
-
-## License
-
-CC0 / public domain (see LICENSE) — for the future, no strings.
+Next: identity (ECDSA-P256 signing — the one frank2 RTL gap), then a trust graph
+over the discovered mesh.
