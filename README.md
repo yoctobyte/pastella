@@ -15,9 +15,15 @@ lwIP on ESP32, same calls). No Synapse. No Windows.
 
 ## Status
 
-Early. The capability spike (`src/spike_udp.pas`) proves the foundation:
-native PAL_NET loopback + SHA-256 content hashing, built with the pinned pxx
-compiler and verified against `sha256sum`.
+Spine working. The content-addressed anti-entropy core runs both ways:
+- `src/gossip_mem.pas` — pure in-memory core, N peers gossip pairwise to
+  convergence (deterministic, no I/O). This is the test harness.
+- `src/gossip_tcp.pas` — the same offer/fetch (HAVE/WANT/DATA) over real PAL
+  TCP loopback, every object content-hash verified.
+- `src/spike_udp.pas` — the original PAL_NET + SHA-256 capability spike.
+
+Next: identity (needs ECDSA-P256 signing in the pxx RTL — a frank2 gap), then
+trust, messaging policies, discovery, and the ESP32 swarm.
 
 See **[DESIGN.md](DESIGN.md)** for the architecture, the layer plan, the mapping
 to pxx/PAL primitives, and the known gaps (notably: ECDSA-P256 signing must be
