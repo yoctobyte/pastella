@@ -16,6 +16,7 @@ TESTS=(
   "test_filetransfer:FILE TRANSFER OK"
   "test_routing:ROUTING OK"
   "test_nat:NAT TRAVERSAL OK"
+  "test_realm:REALM + SECURE TRANSPORT OK"
 )
 
 pass=0; fail=0
