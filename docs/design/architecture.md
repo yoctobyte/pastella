@@ -66,6 +66,71 @@ Does **not** know: topics, members, content.
 cannot open raw sockets at all, so it needs a WebRTC transport behind this seam
 plus signalling infrastructure. Scope it honestly if it ever comes up.)*
 
+#### Transport: the invariant is fixed, the mechanism is not
+
+**The invariant, which never changes:**
+
+> ### No unvalidated amplification
+>
+> A node must never be induceable into mailing bytes at a victim it never spoke
+> to. This is what separates a P2P network from a distributed DDoS weapon.
+
+**The mechanism differs per transport, and both are fine:**
+
+| transport | how the invariant is met |
+|---|---|
+| **TCP** | **free** — the three-way handshake *is* the return-routability check. A spoofed source cannot complete it. |
+| **UDP** | a **cookie** under load (WireGuard) plus an **anti-amplification limit**: send no more than **3x the bytes received** from an unvalidated address (QUIC). |
+| **UDP beacons (LAN)** | **announce-only.** You shout; nobody replies. *A protocol that never answers a UDP packet cannot amplify one.* |
+
+**UDP amplification is a SOLVED problem** — WireGuard and QUIC both solved it, and
+the fixes are small. Treating UDP as inherently unsafe was an error in an earlier
+draft of this document, and it led to a "TCP by design" absolutism that quietly
+cost far more than it saved (below).
+
+#### Why not TCP-only
+
+TCP-only is tempting: the invariant comes free. But **TCP hole-punching is poor** —
+simultaneous-open is inconsistent across NAT implementations, so two peers *both*
+behind NAT often cannot connect at all.
+
+That would make **relays carry a large fraction of all internet traffic** —
+infrastructure we must run and pay for. Relays are blind and honest
+([substrate §4](substrate-and-tenants.md)), but *needing* them for most connections
+is a materially different network from one where they are a last resort. **NAT
+traversal is a big feature, not a detail** ([0012](../tickets/0012-nat-traversal-and-transport.md)).
+
+#### The strategy: hybrid, staged
+
+- **UDP, hole-punched** — the default on the internet (cookie + 3x limit). Direct
+  connections for the large majority.
+- **TCP** — fallback where UDP is blocked; also the LAN and demo path.
+- **Relay** — last resort, for the genuinely unpunchable (symmetric NAT both ends).
+- **UDP beacons** — LAN discovery, announce-only.
+
+**The core does not care.** A connection is *"a byte stream, however obtained"* —
+TCP socket, punched UDP session, or relayed. That is the edge's job, and the core
+never learns which. So the decision is **staged, not front-loaded**: the demo
+([0005](../tickets/0005-offgrid-group-chat.md)) is TCP + LAN beacons and needs no
+NAT traversal at all; UDP punching lands when the network goes to the internet.
+
+**The honest cost:** reliable gossip over UDP means implementing retransmit and
+ordering ourselves. That is real work — but it is the *right kind*: it lives in the
+pure core, so it is deterministic, in-memory testable and fuzzable. It is not
+lock-soup work.
+
+#### No node owes anyone service
+
+> **Any node may refuse a connection, rate-limit, or drop traffic — at any time,
+> for any reason.** Liveness comes from **redundancy** (k replicas, alpha-parallel
+> queries), never from an obligation to answer.
+
+This is not a concession; it is what makes the network robust, and it is what makes
+opt-in DHT participation ([0004](../tickets/0004-discovery-dht.md)) coherent.
+Kademlia already behaves this way — an unresponsive node is simply skipped. **A
+protocol whose correctness depends on strangers answering is a protocol that dies
+the first time somebody rate-limits.**
+
 ### L1 — discovery (pure core + edge beacons)
 
 Answers exactly one question: **who claims to serve topic T?**

@@ -49,6 +49,7 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0009 — Sybil resistance: attack edges & trust flow](tickets/0009-sybil-resistance-trust-flow.md) — *what is a chain of vouches actually worth, and what can a botnet extract from it?*
 - [0010 — File sharing within a realm](tickets/0010-file-sharing-in-realm.md) — *optional tenant; forces chunking + GC*
 - [0011 — Sensor mesh & the leaf-node role](tickets/0011-sensor-mesh-leaf-nodes.md) — *optional tenant; forces the leaf contract*
+- [0012 — NAT traversal & transport strategy](tickets/0012-nat-traversal-and-transport.md) — **big feature.** Hole-punching decides whether the network works for real users at all
 
 ## Build order (and why it is not the obvious one)
 

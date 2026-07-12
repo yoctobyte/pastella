@@ -31,24 +31,46 @@ to surround a target and lie about who serves a topic. Opt-in trades user safety
 against network security — a real tension, not a free win. Mitigate with
 pubkey-bound node IDs and disjoint lookup paths (S/Kademlia).
 
-### 2. DoS resistance — NOT a knob. Unconditional, in the wire format.
+### 2. DoS resistance — NOT a knob. The invariant is fixed; the mechanism follows the transport.
 
-Rate-limiting ("drop everything above the limit") protects us as the **victim**.
-It does **not** stop us being used as the **weapon**, and that is the dangerous
-case: an amplification attack sends a *small* number of *spoofed* queries — well
-under any rate limit — and we dutifully mail a big reply to the forged victim
-address. We never notice. The victim gets hit by a thousand of our peers at once,
-and Pastella's traffic signature gets blocked network-wide.
+> **Invariant: no unvalidated amplification.** A node must never be induceable into
+> mailing bytes at a victim it never spoke to.
 
-Three rules, all cheap, all mandatory:
+How it is met depends on the transport
+([architecture](../design/architecture.md), [0012](0012-nat-traversal-and-transport.md)):
 
-- **Never reply with more bytes than were received** from an unverified address.
-- **Prove return-routability first** — a cookie round-trip before doing any real
-  work for a stranger.
-- **Rate-limit per source** (the self-defence we already wanted).
+| transport | mechanism |
+|---|---|
+| **TCP** | **free** — the handshake *is* the return-routability check |
+| **UDP** | **cookie** under load (WireGuard) + **3x anti-amplification limit** before address validation (QUIC) |
+| **UDP beacons** | **announce-only** — you shout, nobody replies. A protocol that never answers a UDP packet cannot amplify one |
 
-The first two are a few lines each and are the difference between a P2P network
-and a DDoS weapon.
+Plus, always: **rate-limit per source** — the self-defence, which is a separate
+concern from being the *weapon*.
+
+**Do not conclude "therefore TCP-only".** That was an earlier draft's mistake: TCP
+hole-punching is poor, so TCP-only would push most internet traffic through relays.
+UDP amplification is a solved problem (WireGuard/QUIC), and NAT traversal is a big
+feature — see [0012](0012-nat-traversal-and-transport.md).
+
+#### Kademlia over either transport
+
+Kademlia is conventionally UDP, and that works here **provided the cookie + 3x rules
+hold**. Over TCP it also works, paying a handshake per hop (~2 RTT instead of 1,
+across ~log N hops, alpha=3 parallel). **Finding a peer is a background operation,
+not an interactive one**, so either is affordable. Cache provider records so lookups
+are rare regardless.
+
+#### No node owes anyone service
+
+> **Any node may refuse a connection, rate-limit, or drop traffic — at any time,
+> for any reason.** Liveness comes from **redundancy** (k replicas, alpha-parallel
+> queries), never from an obligation to answer.
+
+Not a concession — this is what makes the DHT *robust*, and what makes opt-in
+participation (§1) coherent. Kademlia already behaves this way: an unresponsive node
+is simply skipped. **A protocol whose correctness depends on strangers answering is
+a protocol that dies the first time somebody rate-limits.**
 
 ### 2a. The DHT carries NO metadata — no extension point, ever
 
@@ -94,9 +116,11 @@ entirely**, which is exactly what proves the layering is honest.
 
 - Chat works with the DHT disabled (proves L1 is genuinely swappable).
 - A node that opted out still resolves topics; it just serves nobody.
-- Amplification: no unverified request can provoke a larger reply; a spoofed
-  source cannot make us send anything substantial. Test with forged source
-  addresses, not just load.
+- **Amplification, tested adversarially:** on UDP, an unvalidated source cannot
+  make a node emit more than 3x what it sent, nor do real work before address
+  validation. On TCP it is free. Test with *forged source addresses*, not just load.
+- **Refusal is legal:** a lookup still succeeds when an arbitrary fraction of nodes
+  refuse, rate-limit or drop. Liveness comes from redundancy, never from obligation.
 - A `lan-only` realm emits nothing to the global index.
 - topicIDs rotate by epoch; an outsider holding an old topicID cannot enumerate
   current members.
