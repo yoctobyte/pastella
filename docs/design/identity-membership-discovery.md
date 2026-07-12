@@ -42,6 +42,86 @@ warehousing the goods.
 
 ---
 
+## 0a. Identity is cheap. It must therefore mean nothing.
+
+The deepest difference from Signal is not bootstrap and not offline delivery
+(§7a). It is this:
+
+**Signal's identity is a phone number — a scarce resource.** It costs money and a
+SIM to mint one, so "has an account" carries a faint but real signal, and mass
+account creation has a price.
+
+**Ours is a keypair.** Minting one costs ~7 ms. Anyone can craft a million.
+
+Therefore, as a root-level rule that every other decision must respect:
+
+> **Possessing a valid identity confers EXACTLY ZERO trust.
+> Trust comes only from attestation — a human act, out of band.**
+
+The moment anything in the system treats "is a valid key" as meaningful, the
+Sybil door is open. Today, at this scale, it is a small issue. At any real scale
+it is *the* issue — botnets vouching for each other into legitimacy — and it
+cannot be retrofitted, because by then the trust semantics are load-bearing.
+
+### Three Sybil problems, three different fixes
+
+They get confused with each other. They are not the same problem.
+
+| | problem | fix | status |
+|---|---|---|---|
+| **1** | **Routing Sybil / eclipse** — fake nodes surround you in the DHT and lie about who serves a topic | *Technical*: pubkey-bound node IDs, disjoint lookup paths, IP diversity (S/Kademlia) | [0004](../tickets/0004-discovery-dht.md) |
+| **2** | **Membership Sybil** — a thousand fake accounts join your group | *Already solved*: the invitation / admin-approved tiers are a **human gate**. Sybil is bounded by admission, not by identity cost. This is exactly why `open` is not recommended | §4 |
+| **3** | **Reputation Sybil** — a botnet upvoting itself into legitimacy | *Structural*: see below. This is the one that bites at scale | [0008](../tickets/0008-attestation-and-trust-graph.md) |
+
+### Subjective trust IS the Sybil defence
+
+The answer to (3) is already the project's stated philosophy — *"reality is your
+trust graph"* (`DESIGN.md`). It is worth spelling out **why** that line is a
+security property and not a slogan:
+
+- A **global** score ("this user has 10,000 reputation") is Sybil-broken *by
+  construction*. A million fake accounts vouching for each other produce a big
+  number. There is no clever weighting that fixes this; the attacker controls the
+  inputs.
+- A **subjective** score is not. Trust is computed only over paths **from you**. A
+  million mutually-upvoting bots have **zero edges from anyone you trust**, so
+  their weight in your view is exactly zero. They can shout all they like into a
+  graph you are not connected to.
+
+**Hard rule: never compute a global reputation number. Ever.** Not for sorting,
+not for a "trending" view, not as a convenience. The moment a global score
+exists, it is a Sybil target — and this is precisely the kind of thing that gets
+added innocently in a UI ticket two years later, by someone who never read this
+paragraph.
+
+### Proof-of-work is NOT a Sybil defence
+
+The instinctive fix is to make identity expensive with a PoW stamp. **Do not lean
+on this.** Botnets *are* CPU: you would be taxing legitimate phone users while
+handing an advantage to the exact attacker you are defending against.
+
+PoW is fine as a **rate limiter** on unsolicited requests (it appears in
+[0007](../tickets/0007-pairwise-contacts.md) for cold-calls). It is not a Sybil
+defence. **Sybil resistance comes from the social layer, not the compute layer.**
+
+### No global namespace — use petnames
+
+Do not build a username registry. Global unique names mean squatting and
+impersonation (Zooko's triangle: memorable / global / secure — pick two).
+
+**Petnames**: *you* name your contacts locally, bound to a fingerprint. "Alice"
+means whoever *I* pinned as Alice. This kills a whole class of impersonation
+attack and is free to decide now, impossible later.
+
+### Key loss is identity loss
+
+Identity is a keypair, so losing the device loses the person. This needs a signed
+**key-succession** statement ("key A declares key B its successor") plus
+re-attestation by contacts — and it must be designed early, because a succession
+has to be verifiable by *everyone who ever trusted the old key*.
+
+---
+
 ## 1. The layers
 
 Four layers. Each is ignorant of the one above it, and each is testable alone.

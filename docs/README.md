@@ -7,10 +7,12 @@ Minimal, file-based. No tracker, no tooling — just markdown under version cont
 Decisions that outlive any one ticket. Read before touching the protocol.
 
 - [Identity, membership & discovery](design/identity-membership-discovery.md) —
-  the node key is not the membership key; the global layer is a phonebook, never
-  a filestore; three admission tiers as policy over one mechanism; 1:1 as a
-  two-member realm reached by private rendezvous; what we deliberately do **not**
-  defend against.
+  **identity is cheap, so it must confer zero trust** (and why a global
+  reputation score can therefore never exist); the node key is not the membership
+  key; the global layer is a phonebook, never a filestore; three admission tiers
+  as policy over one mechanism; 1:1 as a two-member realm reached by private
+  rendezvous; offline delivery (what Signal's servers actually buy); and what we
+  deliberately do **not** defend against.
 
 ## Tickets
 
@@ -33,6 +35,7 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0005 — Off-grid group chat (the demo)](tickets/0005-offgrid-group-chat.md)
 - [0006 — Bootstrap & reachability: bringing the network UP](tickets/0006-bootstrap-and-reachability.md)
 - [0007 — Pairwise contacts (1:1)](tickets/0007-pairwise-contacts.md)
+- [0008 — Attestation & the trust graph](tickets/0008-attestation-and-trust-graph.md)
 
 ## Build order (and why it is not the obvious one)
 
