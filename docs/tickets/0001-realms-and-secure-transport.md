@@ -67,15 +67,45 @@ encryption/auth) and *membership* are the same handshake.
 - [ ] `public`-tier content signing + trust-graph vouching.
 - [ ] Revocation list gossiped in-realm.
 
-### Known follow-up (frank2, not blocking)
-- **ECDSA-P256 is slow**: naive bignum, Fermat inverse (256-bit modexp),
-  bit-by-bit scalar mult. Fine for occasional auth handshakes; needs
-  Montgomery/windowed mult + binary-GCD inverse before high-rate signing. Also:
-  RFC-6979 deterministic nonces + constant-time hardening.
-  - **2026-07-12: 7.6x faster** — `BigDivMod` was picking each quotient limb by a
-    30-step binary search (a full bignum multiply per step). Replaced with Knuth
-    algorithm D in frank2 `lib/rtl/bignum.pas` (frank2 `bac1de95`).
-    `test/test_ecdsa_sign.pas`: **20.7s -> 2.7s**. Division was the bottleneck —
-    it sits under the Fermat inverse's modexp and every reduction in the scalar
-    multiply. Montgomery/windowed mult + binary-GCD inverse are still open and
-    are now the next-biggest wins.
+### Known follow-up (frank2) — **ECDSA perf: DONE 2026-07-12, ~25x**
+
+ECDSA-P256 was ~1-2 s/op: naive bignum, Fermat inverse (256-bit modexp),
+bit-by-bit scalar mult. Now:
+
+| op | before | after |
+| --- | --- | --- |
+| keygen | 244 ms | ~7 ms |
+| sign | 257 ms | ~12 ms |
+| verify | 482 ms | ~19 ms |
+
+A realm join / mTLS handshake is no longer dominated by signature work. For
+scale: the TLS *key exchange* (x25519) was always ~5-10 ms; it was the
+certificate signature checks that cost half a second each.
+
+Three steps, all in frank2:
+1. **`BigDivMod` -> Knuth algorithm D** (`bac1de95`). It was picking each
+   quotient limb by a 30-step binary search — a full bignum multiply per step.
+   7.6x on its own; division sits under everything else.
+2. **Dedicated P-256 field arithmetic** — new `lib/rtl/p256field.pas`:
+   Montgomery/CIOS over four saturated 64-bit limbs, no division at all on the
+   hot path. Needed a new compiler intrinsic (`__pxxmulhi_u64`, widening
+   64x64->128 multiply: x86-64 `mul` / aarch64 `umulh`) so multi-precision code
+   can use full 2^64 limbs instead of bignum's 1e9-per-limb radix.
+3. **Euclid instead of Fermat** for the inverse mod n (`8deeb3e2`) — once the
+   field was fast, that one 256-bit modexp was the biggest cost left.
+
+Correctness held throughout: the known-answer vectors (`lib_ecdsa_p256`), the
+sign/verify round-trip with tampered-message / tampered-sig / wrong-key
+rejections, and the X.509 chain verify all still pass, on x86-64 and aarch64.
+
+Still open: RFC-6979 deterministic nonces + constant-time hardening (both
+security, not speed), and windowed/wNAF scalar multiplication (another ~2-4x if
+ever wanted).
+
+**ESP32 caveat.** Writing p256field flushed out three real compiler bugs, one of
+which matters here: 64-bit named constants were silently TRUNCATED on the 32-bit
+targets, so any crypto constant table computed garbage on i386/arm32/riscv32
+while being perfect on the dev box. Fixed. But `p256field` still core-dumps on
+riscv32 (frank2 ticket `bug-riscv32-p256field-coredump`), and ESP32 is
+riscv32/xtensa — so realm crypto on device is not proven yet. That is the gate
+for any "same protocol on a $3 chip" demo.
