@@ -17,6 +17,7 @@ TESTS=(
   "test_routing:ROUTING OK"
   "test_nat:NAT TRAVERSAL OK"
   "test_realm:REALM + SECURE TRANSPORT OK"
+  "test_realm_ca:CA-REALM MEMBERSHIP OK"
 )
 
 pass=0; fail=0
@@ -26,7 +27,7 @@ for entry in "${TESTS[@]}"; do
   if ! FRANK2="${FRANK2:-$HOME/frank2}" ./build.sh "src/$name.pas" >/tmp/pt_$name.build 2>&1; then
     printf '  BUILD-FAIL  %-18s\n' "$name"; fail=$((fail+1)); continue
   fi
-  out="$(timeout 60 "build/$name" 2>&1)"
+  out="$(timeout 120 "build/$name" 2>&1)"
   if echo "$out" | grep -qF "$marker"; then
     printf '  PASS        %-18s %s\n' "$name" "$(echo "$out" | grep -F "$marker")"
     pass=$((pass+1))

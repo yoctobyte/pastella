@@ -1,7 +1,7 @@
 # 0001 — Realms & secure transport
 
-- **Status:** Phase 1 **done** (PSK realms + sealed transport + auth discovery,
-  10/10 tests green); Phase 2 **blocked** on frank2 ECDSA-sign.
+- **Status:** Phase 1 **done**; Phase 2 **in progress** — ECDSA-sign gap closed
+  in frank2, CA-realm membership landed; mTLS + revocation remain.
 - **Depends:** Phase 2 needs frank2 **ECDSA-P256 signing** (only `Verify` exists
   in `lib/rtl/ecdsa_p256.pas`).
 
@@ -53,12 +53,22 @@ encryption/auth) and *membership* are the same handshake.
 - [x] Realm-scoped authenticated discovery beacon (realmID + HMAC), outsider
       beacon rejected.
 
-## Phase 2 — CA realms + mTLS (blocked on frank2 ECDSA-sign)
+## Phase 2 — CA realms + mTLS
 
-- [ ] Add `EcdsaP256Sign` + keypair-gen to frank2 `lib/rtl/ecdsa_p256.pas`
-      (Track B ticket) — the keystone.
-- [ ] Realm CA: founder key signs member certs; join presents cert, verified vs CA.
+- [x] Add `EcdsaP256Sign` + `PubFromPriv` + `GenKey` to frank2
+      `lib/rtl/ecdsa_p256.pas` (was verify-only) — the keystone. Round-trip
+      tested (`test/test_ecdsa_sign.pas`). Committed to frank2.
+- [x] Realm CA: founder key signs member certs; join proves cert validity AND
+      key ownership (challenge-response) — replay-proof. `src/realm_ca.inc` +
+      `src/test_realm_ca.pas` (legit admitted, replay rejected).
 - [ ] Mutual-TLS transport (`tls13_hs` + realm CA trust root) replacing/augmenting
-      the PSK sealed transport.
+      the PSK sealed transport. (Or simpler: ECDH shared-secret from the member
+      keys → session key, instead of PSK-derived.)
 - [ ] `public`-tier content signing + trust-graph vouching.
 - [ ] Revocation list gossiped in-realm.
+
+### Known follow-up (frank2, not blocking)
+- **ECDSA-P256 is slow** (~1-2 s/op): naive bignum, Fermat inverse (256-bit
+  modexp), bit-by-bit scalar mult. Fine for occasional auth handshakes; needs
+  Montgomery/windowed mult + binary-GCD inverse before high-rate signing. Also:
+  RFC-6979 deterministic nonces + constant-time hardening.
