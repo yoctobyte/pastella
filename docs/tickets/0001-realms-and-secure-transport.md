@@ -68,7 +68,14 @@ encryption/auth) and *membership* are the same handshake.
 - [ ] Revocation list gossiped in-realm.
 
 ### Known follow-up (frank2, not blocking)
-- **ECDSA-P256 is slow** (~1-2 s/op): naive bignum, Fermat inverse (256-bit
-  modexp), bit-by-bit scalar mult. Fine for occasional auth handshakes; needs
+- **ECDSA-P256 is slow**: naive bignum, Fermat inverse (256-bit modexp),
+  bit-by-bit scalar mult. Fine for occasional auth handshakes; needs
   Montgomery/windowed mult + binary-GCD inverse before high-rate signing. Also:
   RFC-6979 deterministic nonces + constant-time hardening.
+  - **2026-07-12: 7.6x faster** — `BigDivMod` was picking each quotient limb by a
+    30-step binary search (a full bignum multiply per step). Replaced with Knuth
+    algorithm D in frank2 `lib/rtl/bignum.pas` (frank2 `bac1de95`).
+    `test/test_ecdsa_sign.pas`: **20.7s -> 2.7s**. Division was the bottleneck —
+    it sits under the Fermat inverse's modexp and every reduction in the scalar
+    multiply. Montgomery/windowed mult + binary-GCD inverse are still open and
+    are now the next-biggest wins.
