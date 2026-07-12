@@ -85,13 +85,83 @@ edge types, and they must never collapse into a single "trust" number.
 
 - **Depth cap** — default **0** (direct only). The user may opt in to 1 ("trust
   friends of"), perhaps 2. **Never unbounded.**
-- **k disjoint paths** — beyond depth 1, require **>= 2 paths through different
-  friends**. This is the Sybil hardening: deceiving one friend buys the attacker
-  one path, not admission.
 - **Decay per hop.**
 - **Show the path in the UI** — *"vouched by Alice, whom you verified in
   person."* **Never a bare checkmark.** Provenance *is* the security property;
   hiding it behind a green tick destroys it.
+- **Capacity-constrained flow, NOT path counting** — see below. This is the part
+  that actually stops a botnet.
+
+## Part 3 — the actual Sybil bound: count ATTACK EDGES, not identities
+
+### The win condition is not "keep them out"
+
+Keeping a botnet out is **impossible** and any design claiming otherwise is
+lying. Identities are free. What is *not* free is an **attack edge** — an edge
+from an honest human to a fake, each one costing a real act of deception against
+a real person.
+
+The fake region and the honest region are connected **only** through those edges,
+so that cut is **sparse** — not through any cleverness of ours, but because
+deceiving humans does not scale the way keygen does. This is the basis of the
+Sybil-defence literature (SybilGuard / SybilLimit / Advogato), and it is the only
+real lever available.
+
+> **Correct goal: the attacker's cost is LINEAR in humans deceived, and its
+> benefit is BOUNDED BY THE CUT — not by the number of fakes it mints.**
+>
+> A million bots behind 3 attack edges must be worth no more than 3 fooled
+> friends.
+
+### Therefore: k-disjoint-paths is the WRONG mechanism
+
+An earlier draft of this ticket required *k >= 2 disjoint paths*. **That is
+wrong and is hereby replaced.** If the botnet has edges from several of your
+friends, it *has* multiple disjoint paths — path counting waves it straight
+through. Path counting fails at exactly the case we care about.
+
+### Use capacity-constrained max-flow
+
+Give every trust edge a finite **capacity**. Trust from you to a stranger is the
+**max-flow** through the graph, and — the load-bearing property — **flow is
+conserved**. Then:
+
+- 3 fooled friends => at most **3 edges' worth of capacity** crosses into the
+  fake region.
+- A thousand bots behind those 3 edges **share** those 3 units: ~3/1000 each,
+  indistinguishable from noise.
+- **Minting more identities gains the attacker NOTHING.** The bottleneck is the
+  cut, and the cut is human.
+
+Sybil growth becomes **self-defeating**: the more fakes they create, the more
+diluted each one is. This is the Advogato/max-flow insight and it is the central
+mechanism of this ticket.
+
+### Two multipliers, both cheap
+
+**Voucher accountability.** When a vouched identity turns out to be a bot, the
+**voucher** loses standing *in your graph*. Vouching becomes a bet with a
+downside. This raises the human cost of every attack edge, and makes a fooled
+friend degrade gracefully instead of becoming an unlimited conduit.
+
+**Per-realm scoping.** Trust is **not global across a user's networks**. A user
+belongs to 1:N realms; an edge earned in the chess club grants **nothing** in the
+activist realm. The attacker must pay the human cost *per realm*, and a bot
+network that penetrates one of your worlds cannot walk into the others. This
+converts one breach into one *contained* breach — and it is the honest model of
+how people actually trust (I would lend my neighbour a drill, not my passport).
+
+### What we must accept
+
+**If several friends genuinely vouch for a scammer, you will trust the scammer
+somewhat.** No mechanism fixes this.
+
+But note what it degrades to: **you are exactly as exposed as your friends'
+judgment** — which is the real-world situation, and the one users already
+intuitively understand. That is an acceptable failure mode.
+
+Unbounded propagation from a *single* fooled friend is **not** acceptable, and
+capacity-constrained flow is what eliminates it.
 
 ## The staging — each rung ships alone, each is safe alone
 
@@ -205,8 +275,16 @@ why it has to be designed early, not bolted on after people have real histories.
 - A clique of N mutually-attesting identities, with no edge from the user, has
   **zero** effect on that user's view — demonstrated by a test that builds exactly
   that clique.
-- Identity-binding attestations chain (depth-capped, k-disjoint-path); behavioural
-  judgments **do not chain at all**. Two edge types, never one number.
+- Identity-binding attestations chain (depth-capped, capacity-constrained);
+  behavioural judgments **do not chain at all**. Two edge types, never one number.
+- **The Sybil bound holds:** N fake identities behind `g` attack edges carry no
+  more total weight than `g` fooled friends, for any N. Demonstrated by a test
+  that mints 1,000 Sybils behind 3 edges and shows each ends up with ~3/1000 of
+  an edge's weight — i.e. minting more identities gains the attacker nothing.
+- Trust does **not** leak across realms: an edge earned in one realm grants
+  nothing in another.
+- A voucher whose vouchee is revealed as a bot loses standing in the graph of
+  whoever discovered it.
 - "Trust friends of" is off by default, and turning it on does not publish the
   user's contact edges without a per-attestation visibility choice.
 - Attestation strength (in-person / PAKE / invite / external claim) survives into
