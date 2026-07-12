@@ -50,6 +50,28 @@ Three rules, all cheap, all mandatory:
 The first two are a few lines each and are the difference between a P2P network
 and a DDoS weapon.
 
+### 2a. The DHT carries NO metadata — no extension point, ever
+
+A `PROVIDER` record is strictly typed, fixed-shape, size-capped and TTL'd:
+*"peer P is reachable at A for topicID T, until X"* — **and nothing else**. No
+free-form field, no "notes", no counts, no names, no reserved bytes.
+
+One rule, two holes:
+
+- **Covert channel / storage abuse.** Any free-form field is somewhere to stuff
+  payload — the phonebook quietly becoming a **filestore**, breaking the rule the
+  entire global layer rests on
+  ([0002](0002-layering-node-topic-membership.md)). It never arrives as a proposal
+  to store content; it arrives as a *flexible field* in a harmless-looking patch.
+- **Metadata leak.** Anything past reachability tells an outsider something about a
+  realm — size, activity, naming, rhythm. Discovery is the one place we *invite*
+  outsiders to look, so it must be the place that says the least.
+
+**Parsers must REJECT an over-long or unknown-shaped record — not skip the extra
+bytes.** A lenient parser recreates the extension point the format refuses to have.
+
+**If a feature needs the DHT to carry more, the feature is wrong.**
+
 ### 3. Discovery mode — per realm
 
 `dht` / `lan-only` / `invite-hints-only`. A privacy-sensitive realm (the protest
@@ -78,3 +100,8 @@ entirely**, which is exactly what proves the layering is honest.
 - A `lan-only` realm emits nothing to the global index.
 - topicIDs rotate by epoch; an outsider holding an old topicID cannot enumerate
   current members.
+- **No metadata, provably:** a provider record with any extra byte is REJECTED,
+  not tolerated. Fuzz the parser with over-long, padded and unknown-shaped records
+  and assert none is stored or relayed — i.e. the DHT cannot be used as a covert
+  store, and an observer of it learns nothing about a realm beyond "some peer is
+  reachable for some opaque topicID".

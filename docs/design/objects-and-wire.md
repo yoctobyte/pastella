@@ -86,6 +86,38 @@ carries no content, it has a short TTL, and it is the **only** thing a node stor
 for realms it does not belong to
 ([0002](../tickets/0002-layering-node-topic-membership.md)'s phonebook rule).
 
+### PROVIDER carries NO metadata — strictly typed, no extension point
+
+```
+provider {
+  topic   : topic-id      # 32 bytes, = H(realm_value || epoch). Opaque
+  peer    : pseudonym     # rotating. NOT the node key, NOT a member identity
+  addr    : ip:port       # fixed shape
+  expires : u32           # short TTL
+  sig     : signature     # over the above, by the pseudonym key
+}
+```
+
+**Fixed shape. Size-capped. No free-form field. No extension point. Ever.**
+No notes, no counts, no realm names, no padding, no "reserved" bytes.
+
+This single rule closes two holes that arrive by different doors:
+
+- **Covert channel / storage abuse.** Any free-form field is a place to stuff
+  payload — and that is the phonebook quietly becoming a **filestore**, breaking
+  the one rule the whole global layer rests on. It never arrives as *"let's store
+  content"*; it arrives as a *flexible field* in a pull request that looks
+  harmless.
+- **Metadata leak.** Anything beyond reachability tells an outsider something about
+  a realm — its size, activity, naming, rhythm. The discovery layer is the one
+  place we *invite* outsiders to look, so it must be the one place that says the
+  least.
+
+**If a feature needs the DHT to carry more, the feature is wrong.** Parsers must
+reject an over-long or unknown-shaped provider record outright — not skip the
+extra bytes, *reject the record* — because a lenient parser is what turns "no
+extension point" back into one.
+
 **Unknown types must be relayed, not dropped.** A node that does not understand a
 type still gossips it to realm peers who might. This is what makes the format
 extensible without a flag day — and it is a decision that must be made now,

@@ -7,6 +7,11 @@ Minimal, file-based. No tracker, no tooling — just markdown under version cont
 Decisions that outlive any one ticket. **Read before touching the protocol** —
 [`design/`](design/) has its own index.
 
+- [The substrate and its tenants](design/substrate-and-tenants.md) — Pastella is
+  **not a messenger; it is a substrate**, and the messenger is its first tenant. An
+  app is payload types + a policy, with **zero** core changes — if it needs a core
+  change, the core was wrong. Node roles (leaf / full / seed / mailbox / relay),
+  the blind-infrastructure rule, and **the constitution** every tenant must obey.
 - [Architecture](design/architecture.md) — where the pure core ends and the I/O
   edge begins; what each layer may and may not know.
 - [Objects & wire](design/objects-and-wire.md) — one signed envelope, many payload
@@ -42,6 +47,8 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0007 — Pairwise contacts (1:1)](tickets/0007-pairwise-contacts.md)
 - [0008 — Attestation & the trust graph](tickets/0008-attestation-and-trust-graph.md) — *how do I prove this person is who they say?*
 - [0009 — Sybil resistance: attack edges & trust flow](tickets/0009-sybil-resistance-trust-flow.md) — *what is a chain of vouches actually worth, and what can a botnet extract from it?*
+- [0010 — File sharing within a realm](tickets/0010-file-sharing-in-realm.md) — *optional tenant; forces chunking + GC*
+- [0011 — Sensor mesh & the leaf-node role](tickets/0011-sensor-mesh-leaf-nodes.md) — *optional tenant; forces the leaf contract*
 
 ## Build order (and why it is not the obvious one)
 
