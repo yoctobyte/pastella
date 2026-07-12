@@ -335,26 +335,37 @@ target and lie about who serves a topic. Opt-in trades user safety against netwo
 security — a real tension, not a free win. Mitigate with pubkey-bound node IDs and
 disjoint lookup paths (S/Kademlia).
 
-### 6.2 DoS resistance — NOT a knob
+### 6.2 DoS resistance — NOT a knob. The invariant is fixed; the mechanism follows the transport.
 
-Unconditional, in the wire format.
+> **Invariant: no unvalidated amplification.** A node must never be induceable into
+> mailing bytes at a victim it never spoke to. That is the line between a P2P
+> network and a distributed DDoS weapon.
 
-Rate-limiting ("drop everything above the limit") protects us as the **victim**.
-It does nothing about being used as the **weapon**, which is the dangerous case:
-an amplification attack sends a *small* number of *spoofed* queries — well under
-any rate limit — and we dutifully mail a large reply to the forged victim address.
-We never notice. The victim is hit by a thousand of our peers at once, and
-Pastella's traffic signature gets blocked network-wide.
+| transport | mechanism |
+|---|---|
+| **TCP** | **free** — the three-way handshake *is* the return-routability check |
+| **UDP** | **cookie** under load (WireGuard) + a **3x anti-amplification limit** before address validation (QUIC) |
+| **UDP beacons (LAN)** | **announce-only** — you shout, nobody replies. *A protocol that never answers a UDP packet cannot amplify one* |
 
-Three rules, all cheap, all mandatory:
+Plus, always: **rate-limit per source**. Note this is a *different* concern —
+rate-limiting protects us as the **victim**; the rules above stop us being the
+**weapon**. Both are needed; neither substitutes for the other.
 
-1. **Never reply with more bytes than were received** from an unverified address.
-2. **Prove return-routability first** — a cookie round-trip before doing real work
-   for a stranger.
-3. **Rate-limit per source** (the self-defence, kept).
+**Do not conclude "therefore TCP-only."** That absolutism cost more than it saved:
+TCP hole-punching is poor, so TCP-only pushes most internet traffic through relays.
+UDP amplification is a solved problem. See
+[0012](../tickets/0012-nat-traversal-and-transport.md) and
+[architecture](architecture.md).
 
-Rules 1 and 2 are a few lines each, and they are the difference between a P2P
-network and a DDoS weapon.
+### 6.2a No node owes anyone service
+
+> **Any node may refuse a connection, rate-limit, or drop traffic — at any time,
+> for any reason.** Liveness comes from **redundancy** (k replicas, alpha-parallel
+> queries), never from an obligation to answer.
+
+This is what makes opt-in participation (§6.1) coherent. A protocol whose
+correctness depends on strangers answering dies the first time somebody
+rate-limits.
 
 ### 6.3 Discovery mode — per realm
 

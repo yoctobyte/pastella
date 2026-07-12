@@ -10,8 +10,22 @@
 The 2005 Gnutella model was internet-wide-open: connect to anyone, flood the
 planet. In 2026 that is a liability — scanning/abuse magnet, DDoS-amplification
 vector, illegal-content relay, legal exposure. Every modern mesh (Tailscale,
-Nebula, WireGuard, Nostr) abandoned it. **Pastella has no global mode. The unit
-of a network is a *realm* — a network gated by a cryptographic credential.**
+Nebula, WireGuard, Nostr) abandoned it. **The unit of a network is a *realm* — a
+network gated by a cryptographic credential.**
+
+> **AMENDED by [0002](0002-layering-node-topic-membership.md) (2026-07-12).** This
+> ticket originally said *"Pastella has no global mode"*, and gated even DISCOVERY
+> behind the realm key. That was too strong: it forbids a subject-independent
+> discovery layer that every node serves for everybody, which is a thing we want.
+>
+> The replacement rule keeps everything this paragraph was actually protecting:
+>
+> > **Nodes route metadata for everyone. Nodes store content only for realms they
+> > belong to.** The global layer is a **phonebook, never a filestore**.
+>
+> The liability that destroyed the Gnutella model attaches to **content**, not to
+> **addresses** — handing out a phone number is not warehousing the goods. So a
+> global *discovery* layer is safe; a global *content* mesh never was.
 
 Two features collapse into one mechanism: *secure sockets* (transport
 encryption/auth) and *membership* are the same handshake.

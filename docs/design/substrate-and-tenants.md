@@ -131,7 +131,7 @@ A leaf must be able to participate **without** any of the following, because on 
 ESP32 none of them exist:
 
 - a full object DAG (bounded store; keeps only what it published + what it needs)
-- DHT service (opts out — §6.1 of [0004](../tickets/0004-discovery-dht.md))
+- DHT service (opts out — §1 of [0004](../tickets/0004-discovery-dht.md))
 - history / back-fill (it may have missed everything before it booted)
 - a wall clock it trusts (`created` is advisory anyway —
   [objects & wire §5](objects-and-wire.md))

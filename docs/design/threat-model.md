@@ -43,11 +43,13 @@ out of band (in-person QR, PAKE-over-voice, long fingerprints), and a *short* co
 over an *async* channel is refused because it is grindable
 ([0008](../tickets/0008-attestation-and-trust-graph.md)).
 
-**Being a DDoS amplifier.** Never reply larger than the request to an unverified
-address; prove return-routability before doing work
-([0004 §6.2](../tickets/0004-discovery-dht.md)). This is a wire-format rule, not a
-policy toggle — a rate limit protects *us*; these rules stop us being the
-*weapon*.
+**Being a DDoS amplifier.** **Invariant: no unvalidated amplification** — a node
+must never be induceable into mailing bytes at a victim it never spoke to. Free on
+TCP (the handshake *is* the validation); on UDP a cookie plus a 3x limit before
+address validation; LAN beacons are announce-only
+([0012](../tickets/0012-nat-traversal-and-transport.md),
+[architecture](architecture.md)). A rate limit protects *us* as the victim; these
+rules stop us being the *weapon* — different problems, both required.
 
 **Storing strangers' content.** Nodes route metadata for everyone but **store
 content only for realms they belong to**

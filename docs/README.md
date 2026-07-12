@@ -53,19 +53,26 @@ if a phase is blocked, mark `blocked` and say on what.
 
 ## Build order (and why it is not the obvious one)
 
-Ticket numbers are not priorities. The order is:
+Ticket numbers are not priorities. **The order is:**
 
-**0002 (decide on paper) → 0006 (bootstrap) → 0003 (membership) → 0005 (demo) →
-0004 (DHT).**
+**0002 (decide on paper) → 0006 (bootstrap) + 0012 (NAT) → 0003 (membership) →
+0005 (demo) → 0004 (DHT).**
 
-The DHT comes **last**, deliberately. It is the most fun, the most code, and the
-least demo value — an optimisation on discovery that only starts to matter once
-there are more nodes than invites and seeds can handle. Building it first is the
-classic P2P trap: a beautiful global index with nobody in it.
+Trust (0008 → 0009) rides alongside: stages 0–1 of 0008 (trust-on-first-use with
+loud key-change alerts, plus in-person QR) are near-free and ship with the demo.
+The optional tenants (0007 1:1, 0010 files, 0011 sensors) come after, and each is
+really a **test of the substrate** — if one of them forces a core change, the core
+was wrong.
 
-The thing that actually kills P2P projects is the opposite problem — **bringing
-the network UP** (0006): a first node with nobody to talk to, and peers behind
-NAT who can never connect. That is where the effort goes.
+**Why the DHT is last.** It is an optimisation on discovery, and it only starts to
+matter once there are more nodes than invites and seeds can handle. It is also the
+most fun and the most code — which is exactly the trap: a beautiful global index
+with nobody in it.
+
+**Why bootstrap and NAT are first.** *Bringing the network UP* is how P2P projects
+actually die — a first node with nobody to talk to, and peers behind NAT who can
+never connect. "Network ≫ peer" is true of a mature network; ours has zero nodes.
+NAT traversal is the difference between a protocol and a product.
 
 Two rules from 0002 that everything else inherits:
 

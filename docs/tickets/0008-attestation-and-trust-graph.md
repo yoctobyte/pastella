@@ -123,7 +123,7 @@ YOUR edges, never a global score.
 | **2** | **Async long-fingerprint confirm** — voice note, email, any channel | no new crypto | cheap, next |
 | **3** | **Live short-code confirm** (PAKE / commit-then-reveal) — the nice UX | real crypto work | after 2 |
 | **4** | **Transitive, depth 1** — "trust friends of", provenance shown | graph work | after 3 |
-| **5** | **Depth N** — k>=2 disjoint paths, decay, visibility flags | the hard part | last, and only if wanted |
+| **5** | **Depth N** — capacity-constrained flow ([0009](0009-sybil-resistance-trust-flow.md)), decay, visibility flags | the hard part | last, and only if wanted |
 
 Stages 0–1 ship with the off-grid demo and cost almost nothing. That is the point
 of staging: a real trust story on day one, with the hard graph work kept optional.

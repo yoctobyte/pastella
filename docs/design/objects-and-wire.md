@@ -168,11 +168,12 @@ and it still carries everything above.
 - **Verify before store.** `H(bytes)` must equal the announced hash, and `sig`
   must verify under `author`. An object failing either is dropped and the peer is
   penalised — never stored, never relayed.
-- **Never reply larger than the request to an unverified peer**, and prove
-  return-routability before doing real work
-  ([0004](../tickets/0004-discovery-dht.md) §6.2). This belongs in the wire
-  format, not in a policy layer, because it is what stops the network being used
-  as a DDoS amplifier.
+- **No unvalidated amplification.** A node must never be induceable into mailing
+  bytes at a victim it never spoke to. Free on TCP (the handshake validates); on
+  UDP, a cookie plus a 3x limit before address validation; LAN beacons are
+  announce-only ([0012](../tickets/0012-nat-traversal-and-transport.md)). This
+  belongs in the wire format, not a policy layer — it is what stops the network
+  being a DDoS weapon.
 - **Cap everything**: frame size, `refs` count, objects per `HAVE`. An unbounded
   field is a memory-exhaustion bug waiting to be found by someone else.
 

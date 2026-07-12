@@ -26,7 +26,7 @@ An ESP32 has ~300 KB of RAM. It **cannot** hold a DAG, **cannot** serve a DHT,
 different *capability profile* ([substrate §4](../design/substrate-and-tenants.md)):
 
 - bounded store — keeps what it published plus what it currently needs
-- no DHT service (opts out — [0004 §6.1](0004-discovery-dht.md))
+- no DHT service (opts out — [0004 §1](0004-discovery-dht.md))
 - no history / no back-fill — it may have missed everything before it booted
 - no trusted wall clock (`created` is advisory anyway)
 
