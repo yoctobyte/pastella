@@ -4,15 +4,20 @@ Minimal, file-based. No tracker, no tooling — just markdown under version cont
 
 ## Design documents
 
-Decisions that outlive any one ticket. Read before touching the protocol.
+Decisions that outlive any one ticket. **Read before touching the protocol** —
+[`design/`](design/) has its own index.
 
+- [Architecture](design/architecture.md) — where the pure core ends and the I/O
+  edge begins; what each layer may and may not know.
+- [Objects & wire](design/objects-and-wire.md) — one signed envelope, many payload
+  types. The spine every other document assumes and none of them defined.
 - [Identity, membership & discovery](design/identity-membership-discovery.md) —
-  **identity is cheap, so it must confer zero trust** (and why a global
-  reputation score can therefore never exist); the node key is not the membership
-  key; the global layer is a phonebook, never a filestore; three admission tiers
-  as policy over one mechanism; 1:1 as a two-member realm reached by private
-  rendezvous; offline delivery (what Signal's servers actually buy); and what we
-  deliberately do **not** defend against.
+  **identity is cheap, so it must confer zero trust**; the node key is not the
+  membership key; the global layer is a phonebook, never a filestore; the three
+  admission tiers as policy over one mechanism; 1:1 as a two-member realm reached
+  by private rendezvous; and offline delivery — what Signal's servers actually buy.
+- [Threat model](design/threat-model.md) — what we defend, what we deliberately do
+  **not**, and why we document architecture rather than legal posture.
 
 ## Tickets
 

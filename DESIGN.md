@@ -64,12 +64,23 @@ Read it before touching the protocol.
 | Content hash | `sha256` — `Sha256` (raw digest), `Sha256Hex` (hex-encoder), `HmacSha256` | ✅ verified vs `sha256sum` |
 | Threads / sync (edge only) | `palthread`, `palsync`, `syncobjs`, `channel` | ✅ |
 | Signature **verify** | `ecdsa_p256` — `EcdsaP256Verify` | ✅ |
-| Signature **sign + keygen** | — | ❌ **gap → frank2 ticket** (only verify exists; identity needs signing) |
-| ESP32 target | `platform/esp` backend + `examples/esp32/net-c3` (working lwIP net) | ✅ demonstrated |
+| Signature **sign + keygen** | `ecdsa_p256` — `EcdsaP256Sign`, `EcdsaP256GenKey` | ✅ landed 2026-07-12 (see below) |
+| ESP32 target | `platform/esp` backend + `examples/esp32/net-c3` (working lwIP net) | ✅ demonstrated (but see gap below) |
 
 ### Known gaps (drive frank2 work)
-- **ECDSA-P256 sign + keypair generation** — only `Verify` exists in
-  `lib/rtl/ecdsa_p256.pas`. Identity/signing needs it. File a Track B ticket.
+- **ECDSA-P256 sign + keygen — DONE** (2026-07-12), and ~25x faster while we were
+  there: keygen 244→~7 ms, sign 257→~12 ms, verify 482→~19 ms. Three steps in
+  frank2: Knuth-D division in `bignum`, a dedicated `p256field` (Montgomery/CIOS
+  on saturated 64-bit limbs, behind a new `__pxxmulhi_u64` widening-multiply
+  intrinsic), and Euclid instead of Fermat for the inverse mod n. A realm join is
+  no longer dominated by signature work.
+- **Realm crypto does not run on ESP32 yet.** `p256field` core-dumps on riscv32
+  (frank2 `bug-riscv32-p256field-coredump`), and ESP32 is riscv32/xtensa. The net
+  stack works; the *crypto* is unproven on device. This gates any "same protocol
+  on a $3 chip" demo.
+  *(Writing that library also flushed out three real compiler bugs, one of which —
+  64-bit named constants silently truncated on 32-bit targets — would have made
+  every crypto constant wrong on ESP32 while passing on the dev box.)*
 - No Ed25519 / BLAKE2 — using ECDSA-P256 + SHA-256 instead; fine, optional
   frank2 tickets if wanted later.
 - `channel` carries `Int64` only — pass buffer-pool indices, not payloads.
