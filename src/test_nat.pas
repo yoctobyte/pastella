@@ -103,10 +103,8 @@ var lfd, conn, rfd: Integer; begin
 end;
 
 procedure IgnoreSigpipe;
-const SYS_rt_sigaction=13; SIGPIPE=13; SIG_IGN=1;
-var act: array[0..3] of Int64; rc: Int64;
-begin act[0] := SIG_IGN; act[1] := 0; act[2] := 0; act[3] := 0;
-  rc := __pxxrawsyscall(SYS_rt_sigaction,SIGPIPE,Int64(@act[0]),0,8,0,0); end;
+var rc: Integer;
+begin rc := PalIgnoreSignal(PAL_SIGPIPE); end;
 
 begin
   IgnoreSigpipe; stop := 0; aRegFd := -1; gotAtB := '';
