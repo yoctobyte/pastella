@@ -37,9 +37,11 @@ done
 # multi-process ring (separate node processes over real TCP)
 echo "=== multi-process ring (3 node processes) ==="
 if FRANK2="${FRANK2:-$HOME/frank2}" ./build.sh src/pastella_node.pas >/tmp/pt_node.build 2>&1; then
-  ( build/pastella_node 5000 5001 alpha 6 & build/pastella_node 5001 5002 beta 6 & \
-    build/pastella_node 5002 5000 gamma 6 & wait ) > /tmp/pt_ring 2>&1
-  if [ "$(grep -c 'final store: 3 objects' /tmp/pt_ring)" = "3" ]; then
+  build/pastella_node 5000 5001 alpha 6 >/tmp/pt_n0 2>&1 &
+  build/pastella_node 5001 5002 beta  6 >/tmp/pt_n1 2>&1 &
+  build/pastella_node 5002 5000 gamma 6 >/tmp/pt_n2 2>&1 &
+  wait
+  if [ "$(grep -hc 'final store: 3 objects' /tmp/pt_n0 /tmp/pt_n1 /tmp/pt_n2 | paste -sd+ | bc)" = "3" ]; then
     printf '  PASS        %-18s 3/3 nodes converged\n' "ring(multiprocess)"; pass=$((pass+1))
   else printf '  FAIL        %-18s\n' "ring(multiprocess)"; cat /tmp/pt_ring; fail=$((fail+1)); fi
 else printf '  BUILD-FAIL  ring\n'; fail=$((fail+1)); fi

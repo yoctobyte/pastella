@@ -45,7 +45,7 @@ begin
 end;
 
 { ---- framed I/O on the reactor ---- }
-procedure SendFrame(fd: Integer; const s: AnsiString);
+procedure SendFrame(fd: Integer; const s: AnsiString); async;
 var hdr: AnsiString; off, tot, L: Integer; n: Int64;
 begin
   L := Length(s);
@@ -60,7 +60,7 @@ begin
   end;
 end;
 
-function RecvExact(fd, count: Integer): AnsiString;
+function RecvExact(fd, count: Integer): AnsiString; async;
 var buf: AnsiString; got: Integer; n: Int64;
 begin
   SetLength(buf, count); got := 0;
@@ -74,13 +74,13 @@ begin
   SetLength(buf, got); RecvExact := buf;
 end;
 
-function RecvFrame(fd: Integer): AnsiString;
+function RecvFrame(fd: Integer): AnsiString; async;
 var h: AnsiString; L: Integer;
 begin
-  h := RecvExact(fd, 4);
+  h := await RecvExact(fd, 4);
   if Length(h) < 4 then begin RecvFrame := ''; exit; end;
   L := (Ord(h[1])shl 24)or(Ord(h[2])shl 16)or(Ord(h[3])shl 8)or Ord(h[4]);
-  RecvFrame := RecvExact(fd, L);
+  RecvFrame := await RecvExact(fd, L);
 end;
 
 function MyHaveList: AnsiString;
@@ -96,13 +96,13 @@ end;
 
 { split a #10-joined hash list, request the ones we lack (WANT), get DATA back.
   `initiator` sends first to avoid lockstep deadlock on tiny buffers. }
-procedure SyncConn(fd: Integer; initiator: Boolean);
+procedure SyncConn(fd: Integer; initiator: Boolean); async;
 var peerHave, want, line, data: AnsiString; i, start, nwant, got: Integer;
 
-  procedure DoSend;
+  procedure DoSend; async;
   begin
-    SendFrame(fd, MyHaveList);          { HAVE }
-    peerHave := RecvFrame(fd);          { peer HAVE }
+    await SendFrame(fd, MyHaveList);          { HAVE }
+    peerHave := await RecvFrame(fd);          { peer HAVE }
     { build WANT = peer hashes we lack }
     want := ''; nwant := 0;
     start := 1;
@@ -117,25 +117,25 @@ var peerHave, want, line, data: AnsiString; i, start, nwant, got: Integer;
         end;
         start := i+1;
       end;
-    SendFrame(fd, want);                { WANT }
+    await SendFrame(fd, want);                { WANT }
     for i := 1 to nwant do
     begin
-      data := RecvFrame(fd);            { DATA }
+      data := await RecvFrame(fd);            { DATA }
       Put(data);
     end;
   end;
 
-  procedure DoServe;
+  procedure DoServe; async;
   var pwant: AnsiString;
   begin
     { symmetric: also answer peer's WANT }
-    pwant := RecvFrame(fd);             { peer WANT }
+    pwant := await RecvFrame(fd);             { peer WANT }
     start := 1;
     for i := 1 to Length(pwant)+1 do
       if (i > Length(pwant)) or (pwant[i] = #10) then
       begin
         line := Copy(pwant, start, i-start);
-        if line <> '' then SendFrame(fd, GetByHash(line));   { DATA }
+        if line <> '' then await SendFrame(fd, GetByHash(line));   { DATA }
         start := i+1;
       end;
   end;
@@ -147,8 +147,8 @@ begin
   else begin
     { server: recv HAVE first isn't needed distinctly; reuse DoSend/DoServe
       in mirrored order }
-    peerHave := RecvFrame(fd);          { peer HAVE }
-    SendFrame(fd, MyHaveList);          { HAVE }
+    peerHave := await RecvFrame(fd);          { peer HAVE }
+    await SendFrame(fd, MyHaveList);          { HAVE }
     { serve peer WANT }
     DoServe;
     { now fetch what we lack from peerHave }
@@ -164,8 +164,8 @@ begin
         end;
         start := i+1;
       end;
-    SendFrame(fd, want);                { WANT }
-    for i := 1 to nwant do begin data := RecvFrame(fd); Put(data); end;
+    await SendFrame(fd, want);                { WANT }
+    for i := 1 to nwant do begin data := await RecvFrame(fd); Put(data); end;
   end;
   got := 0;
 end;
@@ -179,7 +179,7 @@ begin
   PalClose(fd);
 end;
 
-procedure Listener(arg: Pointer);
+procedure Listener(arg: Pointer); async;
 var lfd, conn: Integer;
 begin
   lfd := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_STREAM, 0);
@@ -195,7 +195,7 @@ begin
   end;
 end;
 
-procedure Dialer(arg: Pointer);
+procedure Dialer(arg: Pointer); async;
 var fd, r: Integer;
 begin
   if peerPort = 0 then exit;
@@ -212,7 +212,7 @@ begin
   end;
 end;
 
-procedure Watchdog(arg: Pointer);
+procedure Watchdog(arg: Pointer); async;
 begin
   { Listener loops forever, so RunUntilDone never returns; this ends the
     process after the gossip rounds have had time to converge. }

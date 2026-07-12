@@ -35,7 +35,7 @@ begin
 end;
 
 { ---- framed I/O on the reactor (WaitWritable/WaitReadable, never block) ---- }
-procedure SendFrame(fd: Integer; const s: AnsiString);
+procedure SendFrame(fd: Integer; const s: AnsiString); async;
 var hdr: AnsiString; off, tot, L: Integer; n: Int64;
 begin
   L := Length(s);
@@ -50,7 +50,7 @@ begin
   end;
 end;
 
-function RecvExact(fd, count: Integer): AnsiString;
+function RecvExact(fd, count: Integer): AnsiString; async;
 var buf: AnsiString; got: Integer; n: Int64;
 begin
   SetLength(buf, count); got := 0;
@@ -64,18 +64,18 @@ begin
   SetLength(buf, got); RecvExact := buf;
 end;
 
-function RecvFrame(fd: Integer): AnsiString;
+function RecvFrame(fd: Integer): AnsiString; async;
 var h: AnsiString; L: Integer;
 begin
-  h := RecvExact(fd, 4);
+  h := await RecvExact(fd, 4);
   if Length(h) < 4 then begin RecvFrame := ''; exit; end;
   L := (Ord(h[1]) shl 24) or (Ord(h[2]) shl 16) or (Ord(h[3]) shl 8) or Ord(h[4]);
-  RecvFrame := RecvExact(fd, L);
+  RecvFrame := await RecvExact(fd, L);
 end;
 
 { server side: one coroutine per accepted connection — offer everything }
-procedure ServeConn(arg: Pointer);
-var fd, i: Integer; have: AnsiString;
+procedure ServeConn(arg: Pointer); async;
+var fd, i: Integer; have, ignore: AnsiString;
 begin
   fd := Integer(PtrInt(arg));
   SetNonBlocking(fd);
@@ -85,14 +85,14 @@ begin
     if i > 0 then have := have + #10;
     have := have + server.items[i].hash;
   end;
-  SendFrame(fd, have);         { HAVE }
-  RecvFrame(fd);               { WANT (ignored — we just send all data) }
+  await SendFrame(fd, have);            { HAVE }
+  ignore := await RecvFrame(fd);        { WANT (ignored — we just send all data) }
   for i := 0 to High(server.items) do
-    SendFrame(fd, server.items[i].data);   { DATA }
+    await SendFrame(fd, server.items[i].data);   { DATA }
   PalClose(fd);
 end;
 
-procedure Listener(arg: Pointer);
+procedure Listener(arg: Pointer); async;
 var lfd, conn, accepted: Integer;
 begin
   lfd := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_STREAM, 0);
@@ -114,18 +114,18 @@ begin
   PalClose(lfd);
 end;
 
-procedure Client(arg: Pointer);
+procedure Client(arg: Pointer); async;
 var id, fd, i, nobj: Integer; have, want, data: AnsiString;
 begin
   id := Integer(PtrInt(arg));
   fd := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_STREAM, 0);
   SetNonBlocking(fd);
   PalConnectIpv4(fd, PAL_NET_IP_LOOPBACK, PORT);
-  WaitWritable(fd);            { connected }
+  WaitWritable(fd);            { connected — leaf primitive, bare }
 
-  have := RecvFrame(fd);       { HAVE }
+  have := await RecvFrame(fd); { HAVE }
   want := have;                { we lack everything }
-  SendFrame(fd, want);         { WANT }
+  await SendFrame(fd, want);   { WANT }
 
   { count offered objects = newlines+1, then read that many DATA frames }
   nobj := 1;
@@ -134,7 +134,7 @@ begin
 
   for i := 1 to nobj do
   begin
-    data := RecvFrame(fd);
+    data := await RecvFrame(fd);
     if HashOf(data) <> '' then fetched[id] := fetched[id] + 1;
   end;
   PalClose(fd);

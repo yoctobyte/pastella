@@ -61,7 +61,7 @@ begin
 end;
 
 { --- framed I/O on the reactor --- }
-procedure SendFrame(fd: Integer; const s: AnsiString);
+procedure SendFrame(fd: Integer; const s: AnsiString); async;
 var hdr: AnsiString; off, tot, L: Integer; n: Int64;
 begin
   L := Length(s);
@@ -76,7 +76,7 @@ begin
   end;
 end;
 
-function RecvExact(fd, count: Integer): AnsiString;
+function RecvExact(fd, count: Integer): AnsiString; async;
 var buf: AnsiString; got: Integer; n: Int64;
 begin
   SetLength(buf, count); got := 0;
@@ -90,13 +90,13 @@ begin
   SetLength(buf, got); RecvExact := buf;
 end;
 
-function RecvFrame(fd: Integer): AnsiString;
+function RecvFrame(fd: Integer): AnsiString; async;
 var h: AnsiString; L: Integer;
 begin
-  h := RecvExact(fd, 4);
+  h := await RecvExact(fd, 4);
   if Length(h) < 4 then begin RecvFrame := ''; Exit; end;
   L := (Ord(h[1])shl 24)or(Ord(h[2])shl 16)or(Ord(h[3])shl 8)or Ord(h[4]);
-  RecvFrame := RecvExact(fd, L);
+  RecvFrame := await RecvExact(fd, L);
 end;
 
 { want = hashes in `have` that node ni lacks }
@@ -133,29 +133,29 @@ function Pack(ni, fd: Integer): Pointer; begin Pack := Pointer(PtrInt(ni*65536 +
 { Responder half of the initiator-driven exchange (mirrors Dialer step-for-step):
   1 recv peer HAVE   2 send my HAVE   3 recv peer WANT, serve DATA
   4 send my WANT     5 recv my DATA }
-procedure ServeConn(arg: Pointer);
+procedure ServeConn(arg: Pointer); async;
 var v, fd, ni, i, start, nwant: Integer; phave, pwant, mywant, line, data: AnsiString;
 begin
   v := Integer(PtrInt(arg)); ni := v div 65536; fd := v mod 65536;
   SetNonBlocking(fd);
-  phave := RecvFrame(fd);                          { 1 peer HAVE }
-  SendFrame(fd, NHave(ni));                        { 2 my HAVE }
-  pwant := RecvFrame(fd);                          { 3 peer WANT }
+  phave := await RecvFrame(fd);                          { 1 peer HAVE }
+  await SendFrame(fd, NHave(ni));                        { 2 my HAVE }
+  pwant := await RecvFrame(fd);                          { 3 peer WANT }
   start := 1;                                      {   serve it }
   for i := 1 to Length(pwant)+1 do
     if (i > Length(pwant)) or (pwant[i] = #10) then
     begin
       line := Copy(pwant, start, i-start);
-      if line <> '' then SendFrame(fd, NGet(ni, line));
+      if line <> '' then await SendFrame(fd, NGet(ni, line));
       start := i+1;
     end;
   mywant := WantFrom(ni, phave); nwant := CountLines(mywant);
-  SendFrame(fd, mywant);                           { 4 my WANT }
-  for i := 1 to nwant do begin data := RecvFrame(fd); NPut(ni, data); end;  { 5 my DATA }
+  await SendFrame(fd, mywant);                           { 4 my WANT }
+  for i := 1 to nwant do begin data := await RecvFrame(fd); NPut(ni, data); end;  { 5 my DATA }
   PalClose(fd);
 end;
 
-procedure Listener(arg: Pointer);
+procedure Listener(arg: Pointer); async;
 var ni, lfd, conn: Integer;
 begin
   ni := Integer(PtrInt(arg));
@@ -179,7 +179,7 @@ end;
   lacks. Ordering mirrors ServeConn exactly:
   1 send HAVE   2 recv peer HAVE   3 send WANT, recv my DATA
   4 recv peer WANT, serve DATA }
-procedure Dialer(arg: Pointer);
+procedure Dialer(arg: Pointer); async;
 var ni, peer, fd, r, i, nwant: Integer; phave, mywant, pwant, data, line: AnsiString; start: Integer;
 begin
   ni := Integer(PtrInt(arg));
@@ -191,18 +191,18 @@ begin
     SetNonBlocking(fd);
     PalConnectIpv4(fd, PAL_NET_IP_LOOPBACK, BASE+peer);
     WaitWritable(fd);
-    SendFrame(fd, NHave(ni));                       { 1 my HAVE }
-    phave := RecvFrame(fd);                         { 2 peer HAVE }
+    await SendFrame(fd, NHave(ni));                       { 1 my HAVE }
+    phave := await RecvFrame(fd);                         { 2 peer HAVE }
     mywant := WantFrom(ni, phave); nwant := CountLines(mywant);
-    SendFrame(fd, mywant);                          { 3 my WANT }
-    for i := 1 to nwant do begin data := RecvFrame(fd); NPut(ni, data); end;
-    pwant := RecvFrame(fd);                         { 4 peer WANT }
+    await SendFrame(fd, mywant);                          { 3 my WANT }
+    for i := 1 to nwant do begin data := await RecvFrame(fd); NPut(ni, data); end;
+    pwant := await RecvFrame(fd);                         { 4 peer WANT }
     start := 1;                                     {   serve it }
     for i := 1 to Length(pwant)+1 do
       if (i > Length(pwant)) or (pwant[i] = #10) then
       begin
         line := Copy(pwant, start, i-start);
-        if line <> '' then SendFrame(fd, NGet(ni, line));
+        if line <> '' then await SendFrame(fd, NGet(ni, line));
         start := i+1;
       end;
     PalClose(fd);

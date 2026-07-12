@@ -55,7 +55,7 @@ var n: Integer; begin
   n := Length(peers[ni]); SetLength(peers[ni], n+1); peers[ni][n] := port; end;
 
 { --- framed TCP I/O --- }
-procedure SendFrame(fd: Integer; const s: AnsiString);
+procedure SendFrame(fd: Integer; const s: AnsiString); async;
 var hdr: AnsiString; off, tot, L: Integer; n: Int64; begin
   L := Length(s);
   hdr := Chr((L shr 24)and 255)+Chr((L shr 16)and 255)+Chr((L shr 8)and 255)+Chr(L and 255)+s;
@@ -63,17 +63,17 @@ var hdr: AnsiString; off, tot, L: Integer; n: Int64; begin
   while off < tot do begin WaitWritable(fd); n := PalSend(fd, @hdr[off+1], tot-off);
     if n <= 0 then Exit; off := off + Integer(n); end; end;
 
-function RecvExact(fd, count: Integer): AnsiString;
+function RecvExact(fd, count: Integer): AnsiString; async;
 var buf: AnsiString; got: Integer; n: Int64; begin
   SetLength(buf, count); got := 0;
   while got < count do begin if not WaitReadableTimeout(fd, 3000) then Break;
     n := PalRecv(fd, @buf[got+1], count-got); if n <= 0 then Break; got := got + Integer(n); end;
   SetLength(buf, got); RecvExact := buf; end;
 
-function RecvFrame(fd: Integer): AnsiString;
+function RecvFrame(fd: Integer): AnsiString; async;
 var h: AnsiString; L: Integer; begin
-  h := RecvExact(fd, 4); if Length(h) < 4 then begin RecvFrame := ''; Exit; end;
-  L := (Ord(h[1])shl 24)or(Ord(h[2])shl 16)or(Ord(h[3])shl 8)or Ord(h[4]); RecvFrame := RecvExact(fd, L); end;
+  h := await RecvExact(fd, 4); if Length(h) < 4 then begin RecvFrame := ''; Exit; end;
+  L := (Ord(h[1])shl 24)or(Ord(h[2])shl 16)or(Ord(h[3])shl 8)or Ord(h[4]); RecvFrame := await RecvExact(fd, L); end;
 
 function WantFrom(ni: Integer; const have: AnsiString): AnsiString;
 var i, start: Integer; line, want: AnsiString; begin want := ''; start := 1;
@@ -89,36 +89,36 @@ function CountLines(const s: AnsiString): Integer;
 var i, c: Integer; begin if s = '' then begin CountLines := 0; Exit; end;
   c := 1; for i := 1 to Length(s) do if s[i] = #10 then c := c + 1; CountLines := c; end;
 
-procedure ServeWants(ni, fd: Integer; const w: AnsiString);
+procedure ServeWants(ni, fd: Integer; const w: AnsiString); async;
 var i, start: Integer; line: AnsiString; begin start := 1;
   for i := 1 to Length(w)+1 do
     if (i > Length(w)) or (w[i] = #10) then begin
-      line := Copy(w, start, i-start); if line <> '' then SendFrame(fd, NGet(ni, line)); start := i+1; end; end;
+      line := Copy(w, start, i-start); if line <> '' then await SendFrame(fd, NGet(ni, line)); start := i+1; end; end;
 
 function Pack(ni, fd: Integer): Pointer; begin Pack := Pointer(PtrInt(ni*65536 + fd)); end;
 
-procedure ServeConn(arg: Pointer);
+procedure ServeConn(arg: Pointer); async;
 var v, fd, ni, i, nwant: Integer; phave, pwant, mywant, data: AnsiString; begin
   v := Integer(PtrInt(arg)); ni := v div 65536; fd := v mod 65536; SetNonBlocking(fd);
-  phave := RecvFrame(fd);                 { 1 peer HAVE }
-  SendFrame(fd, NHave(ni));               { 2 my HAVE }
-  pwant := RecvFrame(fd); ServeWants(ni, fd, pwant);   { 3 serve peer WANT }
-  mywant := WantFrom(ni, phave); nwant := CountLines(mywant); SendFrame(fd, mywant);  { 4 my WANT }
-  for i := 1 to nwant do begin data := RecvFrame(fd); NPut(ni, data); end;            { 5 my DATA }
+  phave := await RecvFrame(fd);                 { 1 peer HAVE }
+  await SendFrame(fd, NHave(ni));               { 2 my HAVE }
+  pwant := await RecvFrame(fd); await ServeWants(ni, fd, pwant);   { 3 serve peer WANT }
+  mywant := WantFrom(ni, phave); nwant := CountLines(mywant); await SendFrame(fd, mywant);  { 4 my WANT }
+  for i := 1 to nwant do begin data := await RecvFrame(fd); NPut(ni, data); end;            { 5 my DATA }
   PalClose(fd); end;
 
-procedure GossipOnce(ni, peerPort: Integer);
+procedure GossipOnce(ni, peerPort: Integer); async;
 var fd, i, nwant: Integer; phave, mywant, pwant, data: AnsiString; begin
   fd := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_STREAM, 0); SetNonBlocking(fd);
   PalConnectIpv4(fd, PAL_NET_IP_LOOPBACK, peerPort); WaitWritable(fd);
-  SendFrame(fd, NHave(ni));                { 1 }
-  phave := RecvFrame(fd);                  { 2 }
-  mywant := WantFrom(ni, phave); nwant := CountLines(mywant); SendFrame(fd, mywant);  { 3 }
-  for i := 1 to nwant do begin data := RecvFrame(fd); NPut(ni, data); end;
-  pwant := RecvFrame(fd); ServeWants(ni, fd, pwant);   { 4 }
+  await SendFrame(fd, NHave(ni));                { 1 }
+  phave := await RecvFrame(fd);                  { 2 }
+  mywant := WantFrom(ni, phave); nwant := CountLines(mywant); await SendFrame(fd, mywant);  { 3 }
+  for i := 1 to nwant do begin data := await RecvFrame(fd); NPut(ni, data); end;
+  pwant := await RecvFrame(fd); await ServeWants(ni, fd, pwant);   { 4 }
   PalClose(fd); end;
 
-procedure TcpListener(arg: Pointer);
+procedure TcpListener(arg: Pointer); async;
 var ni, lfd, conn: Integer; begin ni := Integer(PtrInt(arg));
   lfd := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_STREAM, 0);
   PalSetSocketReuseAddr(lfd, 1); PalBindIpv4(lfd, PAL_NET_IP_LOOPBACK, TBASE+ni);
@@ -129,7 +129,7 @@ var ni, lfd, conn: Integer; begin ni := Integer(PtrInt(arg));
   PalClose(lfd); end;
 
 { broadcast my TCP port on the discovery port }
-procedure Beacon(arg: Pointer);
+procedure Beacon(arg: Pointer); async;
 var ni, sock, one, r: Integer; msg: AnsiString; begin ni := Integer(PtrInt(arg));
   sock := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_DGRAM, 0);
   one := 1; PalSetSockOpt(sock, SOL_SOCKET, SO_BROADCAST, @one, 4);
@@ -140,7 +140,7 @@ var ni, sock, one, r: Integer; msg: AnsiString; begin ni := Integer(PtrInt(arg))
   PalClose(sock); end;
 
 { hear beacons, learn peers, and gossip with each known peer every round }
-procedure DiscoAndGossip(arg: Pointer);
+procedure DiscoAndGossip(arg: Pointer); async;
 var ni, sock, one, pr, pa, pp, port, i, code: Integer; buf: array[0..63] of Byte; n: Int64; s: AnsiString; begin
   ni := Integer(PtrInt(arg));
   sock := PalSocket(PAL_NET_AF_INET, PAL_NET_SOCK_DGRAM, 0);
@@ -161,11 +161,11 @@ var ni, sock, one, pr, pa, pp, port, i, code: Integer; buf: array[0..63] of Byte
       end;
     end;
     { gossip with everyone we know }
-    for i := 0 to High(peers[ni]) do GossipOnce(ni, peers[ni][i]);
+    for i := 0 to High(peers[ni]) do await GossipOnce(ni, peers[ni][i]);
   end;
   PalClose(sock); end;
 
-procedure Watchdog(arg: Pointer);
+procedure Watchdog(arg: Pointer); async;
 begin CoSleep(ROUNDS*160 + 800); stop := 1; end;
 
 { Ignore SIGPIPE — a peer that closes mid-exchange must not kill us; PalSend
