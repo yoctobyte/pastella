@@ -40,6 +40,27 @@ Cold-calling a stranger is therefore out of scope. If it is ever wanted it is th
 `open` tier of 1:1: opt-in flag (default **off**), proof-of-work stamp, explicit
 user approval before a conversation exists.
 
+## The gap: offline delivery
+
+A two-member realm has exactly **two** nodes. If the two are never online at the
+same time, the message never arrives — there is no third party to hold it.
+
+Groups do not have this problem: other members store content for their own realm,
+so they *are* the mailbox (post to a realm of eight, seven nodes hold it until
+the last one syncs). 1:1 has nobody.
+
+This — not discovery — is what Signal's servers actually buy, and what has killed
+every serious P2P messenger. Mobile push is the same problem in disguise: a
+backgrounded phone is an offline peer.
+
+Plan: **ship synchronous-only** (messages flow when both are online — honest, and
+enough for the demo), **design for blind mailbox nodes** (dumb encrypted-blob
+stores with a TTL, à la Briar; they cannot read and do not know the sender), and
+keep **mutual contacts as mailboxes** as the zero-infrastructure fallback (leaks
+that two of someone's contacts are corresponding).
+
+See [design §7a](../design/identity-membership-discovery.md#7a-offline-delivery--the-problem-signals-servers-actually-solve).
+
 ## Acceptance
 
 - Two people exchange an invite (QR / string) and can talk, with no global index

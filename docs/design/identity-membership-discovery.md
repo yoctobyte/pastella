@@ -318,6 +318,56 @@ is also the most fun and the most code — which is exactly why it is the trap.
 
 ---
 
+## 7a. Offline delivery — the problem Signal's servers actually solve
+
+The usual framing is that Signal depends on central infrastructure for
+*bootstrap*. That is true, and it is a real difference:
+
+> **Signal without its servers is a dead app. Pastella without its seed nodes is
+> a slower Pastella.**
+
+Signal *cannot function* without its servers — registration needs a phone number
+and a server round-trip, every message routes through central infrastructure, and
+there is a finite set of endpoints for a state to block. Our seed nodes (§7) are
+**convenience, not dependency**: remove every one of them and the network
+degrades rather than dies. Two people in a room with an invite and no internet
+still talk.
+
+Claim it in exactly that shape. Do **not** claim "no servers" while running seed
+nodes — the honest claim is stronger anyway, and [ticket
+0005](../tickets/0005-offgrid-group-chat.md) *proves* it (the demo runs with
+discovery off and nothing but an invite) instead of asserting it.
+
+**But their servers buy something else, and it is not bootstrap: offline
+delivery.** If you message me while my phone is off, Signal's server holds the
+ciphertext until I return. In a pure P2P system, if two peers are never online at
+the same time, **the message never arrives.** This — not discovery — is what has
+killed every serious P2P messenger. Mobile push is the same problem wearing a
+different hat: a backgrounded phone is an offline peer.
+
+**Groups already solve this, for free.** The phonebook rule (§0) says members
+store content for their own realm — so the other members *are* the mailbox. Post
+to a realm of eight and seven nodes hold it until the last member syncs.
+Store-and-forward with no infrastructure.
+
+**1:1 does not.** A two-member realm has exactly two nodes; if they are never
+online together, nothing moves. Options, in order of preference:
+
+1. **Volunteer mailbox nodes** — dumb, blind stores (like the seed nodes): hold
+   an encrypted blob addressed to a rendezvous, with a TTL. Cannot read it, do
+   not know who it is from. This is Briar's "mailbox" concept and it is the
+   pragmatic answer. **Design for this.**
+2. **Mutual contacts as mailboxes** — leave the blob with peers both parties
+   trust. Zero infrastructure, but it leaks: someone learns that two of their
+   contacts are corresponding.
+3. **Synchronous-only 1:1** — messages flow only when both are online. Honest,
+   fine for the demo, not fine for a real messenger. **Ship this first.**
+
+This is the single biggest gap between "works at a festival" and "replaces your
+messenger", and it should not be discovered late.
+
+---
+
 ## 8. Threat model — what we do and do not defend
 
 **Defended:**
