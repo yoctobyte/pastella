@@ -45,6 +45,17 @@ L1 overlay   membership / discovery / connection lifecycle — pure state machin
 L0 transport PAL directly: PalSocket/PalConnect/PalSend/PalRecv (POSIX | lwIP)
 ```
 
+**Superseded in part** — see
+**[docs/design/identity-membership-discovery.md](docs/design/identity-membership-discovery.md)**.
+That document splits L1's "membership / discovery" in two, because they are not
+one layer: **discovery is subject-independent and every node serves it for
+everybody**, while **membership is per-realm and private**. It also fixes the two
+key decisions this sketch left open — the node key is not the membership key, and
+the global layer is a *phonebook, never a filestore* (nodes route metadata for
+everyone; they store content only for realms they belong to).
+
+Read it before touching the protocol.
+
 ## Mapping to pxx/PAL primitives (all present unless noted)
 
 | Need | Provided by | Status |
