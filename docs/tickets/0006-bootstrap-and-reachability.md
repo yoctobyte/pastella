@@ -13,6 +13,56 @@ protocol is beautiful and there is nobody to talk to. The engineering priority i
 therefore not the DHT ([0004](0004-discovery-dht.md)); it is **bringing the
 network up and keeping peers reachable**.
 
+## Every realm is its own infrastructure
+
+**A realm's peer list is realm CONTENT.** Once you are in, the realm gossips its
+own member addresses as ordinary signed objects, synced by the anti-entropy that
+already exists. No global layer is involved in *running* a realm — ever.
+
+So global discovery is not needed to operate. It is needed for exactly **one
+moment**: the very first connection, when you hold no live address for anybody.
+
+### The bootstrap ladder
+
+| rung | mechanism | infrastructure needed |
+|---|---|---|
+| **1** | **LAN beacon** — same room | **none** |
+| **2** | **Cached peers** — you have been here before | **none** |
+| **3** | **Invite hints** — someone handed you addresses | **none** |
+| **4** | **Realm anchors** — members with stable addresses, published *inside* the realm | **the realm's own** |
+| **5** | **Global rendezvous** — only if 1–4 all fail | global (opt-in, [0004](0004-discovery-dht.md)) |
+
+**Rungs 1–4 are entirely self-hosted.** A realm that has any reachable member, or
+any member who remembers one, never touches the global layer.
+
+### Realm anchors — the realm's own infra
+
+A realm may nominate **anchors**: members with a stable address (a cheap VPS, a
+home box on dynamic DNS). Chosen by that realm's own members, trusted by nobody
+else, invisible to everyone else. This is *"every realm is its own
+infrastructure"* made concrete, and it drives rung 5 close to unreachable.
+
+### The failure rung 5 exists for — name it, do not hide it
+
+A small realm where **everyone has a dynamic IP and everyone is offline long
+enough for every cached address to rot.** No LAN, no anchor, no live hint. The
+realm is then **permanently partitioned** — it does not die dramatically, it just
+never reassembles. For a friend group that goes quiet over a summer, that is
+plausible.
+
+Anchors (rung 4) are the realm-scoped answer. The global layer (rung 5) is the
+last-resort answer, and it may not be worth building at all
+([0004](0004-discovery-dht.md)).
+
+### What we must NOT do
+
+**Do not bootstrap one realm from another**, even when the same people are in
+both. It is tempting and it works — and it **links the realms**, destroying the
+compartmentalisation that makes 1:N realms a security property
+([substrate §4](../design/substrate-and-tenants.md),
+[0009](0009-sybil-resistance-trust-flow.md)). An attacker who compromises the
+chess club must not thereby find the activist realm.
+
 ## The four pieces
 
 ### 1. The invite IS the bootstrap

@@ -153,6 +153,18 @@ core to stay small.
 5. **No global reputation score. Ever.**
 6. **No public firehose** — you cannot broadcast to people who never admitted you.
 7. **The core is pure.** Clock, entropy and sockets are *inputs*, never calls.
+7a. **No node is ever obliged to carry anything for anyone outside its realms.**
+   Two different things, often confused:
+   - **Holding your own realm's objects is not relaying — it is membership.** You
+     already store them; store-and-forward for realm-mates falls out for free, and
+     it is what makes group offline-delivery work with no infrastructure at all.
+   - **Carrying bytes for strangers** (`seed`, `mailbox`, `relay`) is **always an
+     opt-in role, never an obligation.**
+
+   Merged with *no node owes anyone service*: any node may refuse, rate-limit or
+   drop, at any time, for any reason. **Every realm is its own infrastructure**;
+   the only thing that is ever global is bootstrap — and even that is a last
+   resort ([0006](../tickets/0006-bootstrap-and-reachability.md)).
 8. **The DHT carries NO metadata.** A `PROVIDER` record is strictly typed,
    fixed-shape, size-capped and TTL'd: *"peer P is reachable at A for topicID T,
    until X"* — and **nothing else**. No free-form fields, no extension point, no

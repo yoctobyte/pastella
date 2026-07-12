@@ -1,6 +1,8 @@
 # 0004 — Discovery: subject-independent, three knobs (L1)
 
-- **Status:** open — **build this LAST of the four.** See "Ordering" below.
+- **Status:** open — **build this LAST, and possibly NEVER.** Requires
+  justification from a running network before a line is written (see "Is this
+  worth building at all?").
 - **Depends:** [0002](0002-layering-node-topic-membership.md) (layering, the
   phonebook rule, topicID derivation).
 
@@ -99,6 +101,27 @@ bytes.** A lenient parser recreates the extension point the format refuses to ha
 `dht` / `lan-only` / `invite-hints-only`. A privacy-sensitive realm (the protest
 group) can refuse to touch any global index at all. A realm that never enables
 `dht` is invisible to it.
+
+## Is this worth building at all?
+
+**Possibly not — and that must be settled before any code is written.**
+
+Once [0006](0006-bootstrap-and-reachability.md)'s bootstrap ladder exists, a
+realm's peer list is realm CONTENT (gossiped, signed, synced by anti-entropy). The
+global layer is therefore never used to *run* a realm. It serves exactly one case:
+**rung 5** — the very first connection when LAN, cached peers, invite hints and
+realm anchors have ALL failed.
+
+That is the rarest case in the system, and this is the most code, the widest attack
+surface and the most moving parts in the system. **Textbook YAGNI.**
+
+**The bar:** evidence from a running network that rung 5 actually happens often
+enough to matter. Until then, this ticket is a design, not a work item.
+
+**The consolation:** the lower the DHT's value, the less its weaknesses cost. The
+Sybil/eclipse exposure of an opt-in (therefore small) DHT (§1) only matters in
+proportion to how much depends on it — and if it is a rare cold-start fallback,
+almost nothing does. Those two facts point the same way.
 
 ## Ordering: why this is LAST
 
