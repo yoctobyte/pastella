@@ -18,26 +18,101 @@ Today this is a small issue (invite-only realms, tiny networks). At scale it is
 *the* issue — botnets vouching for one another into legitimacy — and it cannot be
 retrofitted once trust semantics are load-bearing.
 
-## What an attestation is
+## Part 1 — proving each other over an alternate channel
 
-A signed statement: *"I, key A, met key B, on this date, by this channel."*
+Users must be able to **truly prove each other**, out of band. Two mechanisms,
+and the difference is a security difference, not a UX one:
 
-The channel determines the strength, and the UI must never flatten that
-distinction:
+### Fingerprint comparison (asynchronous)
+
+A hash of **both** identity keys — sorted, concatenated, hashed — so both sides
+see the same string. Read it to each other over a phone call, an existing
+messenger, in person.
+
+**It must be LONG** (~128 bits: 32 hex chars, or Signal's 60 digits). A *short*
+code compared this way is **insecure**: an active man-in-the-middle grinds keys
+offline until the fingerprint collides. This is the mistake to not make.
+
+### PAKE over voice (interactive) — the one to build
+
+Agree on a **weak** shared secret out of band — a spoken word, a 5-digit number
+over the phone — and run **SPAKE2** over it.
+
+The property that makes this work: **a weak secret yields strong
+authentication**, because an active attacker gets exactly *one online guess*, not
+offline grinding. This is what ZRTP does, and it is why a four-word verbal
+comparison suffices there where plain fingerprinting needs 60 digits.
+
+Better security *and* better UX than reading hex at each other. This is the
+answer to "scan my QR" for the case where the two people are not in the same
+room.
+
+### The output of either is one object
+
+A signed **attestation**: *"I, key A, verified key B, on this date, by this
+method."*
 
 | channel | strength | notes |
 |---|---|---|
-| **QR scan, in person** | strongest | proves physical co-presence AND binds the key. The "scan my QR" case |
+| **QR scan, in person** | strongest | proves physical co-presence AND binds the key |
+| **PAKE over voice** | strong | remote, weak secret, active attacker gets one guess |
+| **Long fingerprint compare** | strong *if long* | insecure if shortened |
 | **Invite from an existing member** | the workhorse | already built (0001 Phase 2 realm CA certs) |
 | **External evidence** — fingerprint on your own site / Mastodon / DNS | weak, user-checked | **the user verifies it themselves. We never verify it for them, and we never become a CA.** We only carry the claim |
 
-Attestations expire, can be revoked, and **decay with distance**: I trust you
-fully, what you vouch for somewhat, what *that* vouches for barely — with a hard
-depth cap. A scoped, subjective web of trust, which is what makes it tractable
-where PGP's global WoT failed.
-
 Attestations are ordinary signed objects — the membership log
 ([0003](0003-membership-log-and-tiers.md)) already replicates exactly this shape.
+They expire and can be revoked.
+
+## Part 2 — "trust friends of" (optional, and this is the sharp edge)
+
+### The distinction most designs get wrong
+
+> **Transitivity is defensible for IDENTITY BINDING.
+> It is NOT defensible for BEHAVIOUR.**
+
+- *"Alice verified that this key really is Bob"* — I can lean on this. Alice did
+  the work; if Alice is honest, the binding holds. This is PGP's web of trust,
+  and for **key binding** it genuinely works.
+- *"Alice thinks Bob is not a spammer"* — this does **not** compose. Trusting
+  Alice's judgment says nothing about Bob's behaviour toward *me*, and chaining
+  it is exactly how vouching rings form.
+
+**Transitive attestation for keys; never transitive reputation.** One graph, two
+edge types, and they must never collapse into a single "trust" number.
+
+### With that split, friend-of-friend is safe and useful
+
+- **Depth cap** — default **0** (direct only). The user may opt in to 1 ("trust
+  friends of"), perhaps 2. **Never unbounded.**
+- **k disjoint paths** — beyond depth 1, require **>= 2 paths through different
+  friends**. This is the Sybil hardening: deceiving one friend buys the attacker
+  one path, not admission.
+- **Decay per hop.**
+- **Show the path in the UI** — *"vouched by Alice, whom you verified in
+  person."* **Never a bare checkmark.** Provenance *is* the security property;
+  hiding it behind a green tick destroys it.
+
+## The two hard parts — stated, not wished away
+
+**1. Nobody verifies.** Empirically only a tiny fraction of Signal users ever
+compare safety numbers. The system must therefore be safe-ish for people who
+*never* do it: trust-on-first-use plus **loud alerts on key change**. Design for
+the lazy majority, not the diligent minority — a verification scheme that only
+protects the 2% who use it is theatre.
+
+**2. "Friends of" leaks the social graph.** To compute a path, *someone* must
+reveal edges. Enabling friend-of-friend trust makes part of your contact list
+visible to whoever evaluates it. This is a real tension, not a detail.
+Mitigations:
+
+- attestations carry a **visibility flag** — the voucher decides whether a vouch
+  is publishable at all;
+- scope attestations to a realm rather than globally;
+- for *"do we have a contact in common?"*, **private set intersection** computes
+  the overlap without either side revealing their whole list. Expensive, but it
+  exists — and knowing it exists is what lets us offer the feature without
+  promising the leak.
 
 ## Non-goals — these are the traps
 
@@ -64,12 +139,24 @@ why it has to be designed early, not bolted on after people have real histories.
 
 ## Acceptance
 
-- Trust is *only* ever evaluated relative to an asking identity. There is no
-  code path that produces a reputation number independent of who is asking.
+- Two people who have never met can verify each other over a **voice call** using
+  a short spoken secret (PAKE), and an active MITM on the network cannot succeed
+  — it gets one online guess, not offline grinding.
+- A *shortened* fingerprint comparison is not offered anywhere in the UI (it is
+  the insecure variant, and it looks identical to the secure one).
+- Trust is *only* ever evaluated relative to an asking identity. There is **no
+  code path** that produces a reputation number independent of who is asking.
 - A clique of N mutually-attesting identities, with no edge from the user, has
-  zero effect on that user's view — demonstrated with a test that builds exactly
+  **zero** effect on that user's view — demonstrated by a test that builds exactly
   that clique.
-- Attestation strength (in-person / invite / external claim) survives into the UI
-  rather than collapsing to one "verified" checkmark.
+- Identity-binding attestations chain (depth-capped, k-disjoint-path); behavioural
+  judgments **do not chain at all**. Two edge types, never one number.
+- "Trust friends of" is off by default, and turning it on does not publish the
+  user's contact edges without a per-attestation visibility choice.
+- Attestation strength (in-person / PAKE / invite / external claim) survives into
+  the UI, with the path shown ("vouched by Alice, whom you verified"), rather than
+  collapsing to one "verified" checkmark.
+- A user who never verifies anyone is still protected against silent key
+  substitution (TOFU + key-change alert).
 - A key succession is accepted by peers who trusted the predecessor, and rejected
   when the succession statement is forged or missing.
