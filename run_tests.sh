@@ -32,7 +32,7 @@ for entry in "${TESTS[@]}"; do
     printf '  PASS        %-18s %s\n' "$name" "$(echo "$out" | grep -F "$marker")"
     pass=$((pass+1))
   else
-    printf '  FAIL        %-18s\n' "$name"; echo "$out" | sed 's/^/                '; fail=$((fail+1))
+    printf '  FAIL        %-18s\n' "$name"; echo "$out" | sed 's/^/                /'; fail=$((fail+1))
   fi
 done
 
