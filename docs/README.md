@@ -35,7 +35,8 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0005 — Off-grid group chat (the demo)](tickets/0005-offgrid-group-chat.md)
 - [0006 — Bootstrap & reachability: bringing the network UP](tickets/0006-bootstrap-and-reachability.md)
 - [0007 — Pairwise contacts (1:1)](tickets/0007-pairwise-contacts.md)
-- [0008 — Attestation & the trust graph](tickets/0008-attestation-and-trust-graph.md)
+- [0008 — Attestation & the trust graph](tickets/0008-attestation-and-trust-graph.md) — *how do I prove this person is who they say?*
+- [0009 — Sybil resistance: attack edges & trust flow](tickets/0009-sybil-resistance-trust-flow.md) — *what is a chain of vouches actually worth, and what can a botnet extract from it?*
 
 ## Build order (and why it is not the obvious one)
 
