@@ -93,6 +93,62 @@ edge types, and they must never collapse into a single "trust" number.
   person."* **Never a bare checkmark.** Provenance *is* the security property;
   hiding it behind a green tick destroys it.
 
+## The staging — each rung ships alone, each is safe alone
+
+The full graph is hard. It does not have to arrive at once. What we build is a
+**personal trust chain** — *personal* being the load-bearing word: computed from
+YOUR edges, never a global score.
+
+| stage | what | cost | when |
+|---|---|---|---|
+| **0** | **TOFU + loud key-change alerts** | trivial | with the demo — this is what protects the majority who never verify anything |
+| **1** | **In-person QR** — the strongest attestation there is | trivial | with the demo |
+| **2** | **Async long-fingerprint confirm** — voice note, email, any channel | no new crypto | cheap, next |
+| **3** | **Live short-code confirm** (PAKE / commit-then-reveal) — the nice UX | real crypto work | after 2 |
+| **4** | **Transitive, depth 1** — "trust friends of", provenance shown | graph work | after 3 |
+| **5** | **Depth N** — k>=2 disjoint paths, decay, visibility flags | the hard part | last, and only if wanted |
+
+Stages 0–1 ship with the off-grid demo and cost almost nothing. That is the point
+of staging: a real trust story on day one, with the hard graph work kept optional.
+
+### Trust levels are PROVENANCE, not a score
+
+"2nd order / 3rd order" is a **fact about how you know someone**, not a number to
+sort by. Present it as provenance — *"vouched by Alice, whom you verified in
+person"* — and never collapse it to `trust = 0.6`. The moment it is a number,
+someone sorts by it; the moment someone sorts by it, someone games it.
+
+### The trap: a SHORT code over an ASYNC channel is INSECURE
+
+This one matters because the insecure version looks identical to the secure one
+in the UI.
+
+Comparing a **short** code (5 digits, a few words) over an **asynchronous**
+channel — a recorded voice note, an email — is **broken**. The MITM sits between
+the parties and picks its own key `M`. It needs `SAS(A,M)` (what A sees) to equal
+`SAS(M,B)` (what B sees) — and since it controls `M`, it simply **grinds `M`
+offline** until those two short strings collide. For a 5–6 digit code that is
+~10^6 tries: seconds. Both parties then read out matching codes and are owned.
+
+What defeats this is not the channel but **commitment ordering**: the attacker
+must be forced to commit to its key *before* learning the other side's. That
+requires **interactivity** (ZRTP's commit-then-reveal, or a PAKE). Then it cannot
+search — its only option is to guess the code in advance: one shot, ~10^-6,
+detectable.
+
+**The rule:**
+
+- **async channel** (voice note, email, paste into another messenger) → the code
+  must be **LONG** (~128 bits — a fingerprint);
+- **short human-friendly code** (5 digits, four words) → the exchange must be
+  **LIVE / interactive**.
+
+Both are worth offering. **Never a short code over an async channel.**
+
+*(A voice note does carry a second, non-cryptographic authentication channel —
+you recognise the person's voice. That is real and worth keeping. It is not a
+substitute for length.)*
+
 ## The two hard parts — stated, not wished away
 
 **1. Nobody verifies.** Empirically only a tiny fraction of Signal users ever
