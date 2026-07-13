@@ -165,14 +165,67 @@ frame  = u32 length | body        # length-prefixed, as today
 verbs  = HELLO | HAVE | WANT | DATA | PING | PONG
 ```
 
-- `HELLO` — version, node identity, realm(s) claimed. Realm membership is proven
-  by the handshake (0001), not asserted here.
+- `HELLO` — version, realm claimed, and **capability flags** (below). Realm membership
+  is proven by the handshake, not asserted here.
 - `HAVE` — offer: a list of object hashes.
 - `WANT` — fetch: the subset the peer lacks.
-- `DATA` — one object, verbatim.
+- `DATA` — one object, verbatim. **May be unsolicited** (see PUSH below).
 
 Anti-entropy is unchanged: **offer hashes, fetch what you lack.** The 2005 idea,
 and it still carries everything above.
+
+### Capability flags — peers are equal, but NOT identical
+
+Anti-entropy is normally **symmetric**: both sides offer, both fetch. Real deployments
+are not. A sensor **produces** and wants nothing back; a PC **collects** and keeps
+everything.
+
+```
+HELLO { offers : bool   ; will I send you HAVE lists?
+        wants  : bool   ; do I want YOURS?      (a leaf: NO)
+        serves : bool } ; will I answer your WANT?  (a leaf: NO) }
+```
+
+| | ESP32 / leaf | PC / collector |
+|---|---|---|
+| `offers` | yes | yes |
+| `wants` | **no** | yes |
+| `serves` | **no** | yes |
+| retains | ring buffer, or nothing | hours / days / forever |
+
+A leaf declaring `wants=no, serves=no` means the peer **never sends it a HAVE and never
+asks it for anything**. The leaf therefore never allocates a peer-hash table and never
+receives a byte it does not need. **That is the RAM saving, and it is the entire reason
+the leaf contract exists** ([substrate §4](substrate-and-tenants.md)).
+
+The gossip graph becomes **directed** — readings flow leaf → collector, and collectors
+gossip symmetrically among themselves. Convergence is unaffected; it simply is not a
+full mesh.
+
+**This is a NODE-level policy** (like DHT participation), not a realm-level one: one
+realm holds both leaves and collectors, and **neither is privileged**. A node that wants
+nothing and serves nothing is still a full member — it just publishes.
+
+**These flags must exist in HELLO from v1.** Adding a field to a handshake later is a
+wire break; one byte now is free.
+
+### PUSH — unsolicited DATA, for the tiny publisher
+
+A publish-only leaf should not do `HAVE → WANT → DATA` (three round trips) to deliver
+200 bytes. It may simply **send DATA unsolicited**.
+
+The receiver dedups by hash anyway — objects are **idempotent**, so an unsolicited object
+is harmless. **One datagram instead of three round trips**: on a battery-powered chip
+that is the difference between waking for 5 ms and waking for 300 ms.
+
+Rate-limit it (a member *could* spam), but within a realm that is acceptable.
+
+### The trap: do NOT let `wants` become a query language
+
+The moment it grows into *"send me only sensor X between T1 and T2"*, you have reinvented
+MQTT topics plus a query engine — and a leaf, which has no index, cannot answer it anyway.
+
+**Three booleans.** A type filter may come later *if* something forces it.
 
 ### Rules that are not optional
 

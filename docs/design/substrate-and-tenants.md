@@ -127,6 +127,10 @@ worth defending against every future convenience that would erode it.
 
 ### The leaf contract
 
+A leaf declares `offers=yes, wants=no, serves=no` in HELLO
+([objects & wire](objects-and-wire.md)) — so peers never send it offers and never ask it
+for anything. **Peers are equal; they are not identical.**
+
 A leaf must be able to participate **without** any of the following, because on an
 ESP32 none of them exist:
 

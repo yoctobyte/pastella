@@ -22,6 +22,7 @@ of this document: once you see it, you stop having the same argument over and ov
 | **Object authentication** | realm HMAC · per-author signature | **cost vs attribution** (see §2) | the realm |
 | **Retention** | keep forever · evict · ring buffer | history vs footprint | the tenant |
 | **DHT participation** | opt in · opt out | helping others vs exposure & load | the **node** |
+| **Interest / role** | offers · wants · serves (3 flags in HELLO) | a leaf saves RAM and power by refusing offers; a collector keeps everything | the **node** |
 
 **None of these has a right answer.** Each has a real drawback. A private group and a
 public community want opposite things; an ESP32 and a desktop want opposite things.
