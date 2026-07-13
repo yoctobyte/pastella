@@ -99,6 +99,61 @@ last resort, not the plan.**
 traffic through relays. That over-stated it: it ignored port mapping, and it ignored
 that gossip needs connectivity rather than a mesh.)*
 
+## The all-NAT realm, and the honest theorem
+
+The connectivity argument above needs **at least one** member that can accept a
+connection. What if none can — every node behind NAT, or all behind CGNAT (a
+mobile-only realm)?
+
+> ### Two peers that both cannot ACCEPT connections cannot establish a TCP
+> ### connection without a third party CARRYING THE DATA.
+
+That is not a flaw in our design; that is TCP. And it is the exact price of staying
+TCP-only:
+
+| transport | what the third party is | what it costs |
+|---|---|---|
+| **TCP** | a **RELAY** — it carries **every byte**, for the whole session | bandwidth, forever; and it sees traffic volume and timing |
+| **UDP** | a **RENDEZVOUS** — it only helps both sides learn their mapped addresses, then **the data goes direct** | ~nothing; it carries no traffic at all |
+
+**This — not hole-punch success rates — is the real argument for a UDP data path.**
+The question is not "does punching work more often". It is **whether your third party
+is a cheap signalling box or an expensive pipe that watches all your traffic.**
+
+That is the "cumbersome solution": a UDP data path with its own reliability layer
+(§honest cost). Its payoff is that **relays stop being load-bearing**.
+
+## Do NOT let a reachable node become a supernode
+
+If one member is reachable and twenty are not, that member silently becomes:
+
+- a **bandwidth sink** — O(N) connections, every object flowing through it;
+- a **metadata concentrator** — who is online, when, how much;
+- a **de facto authority** — and the moment others *depend* on it, it is a
+  Skype-style **supernode**, which is precisely the architecture this project exists
+  to reject.
+
+**Rules, in order of how much to lean on them:**
+
+1. **Make more nodes reachable.** Port mapping (NAT-PMP / PCP / UPnP) and IPv6 attack
+   the *cause*. Every node that becomes reachable removes both load and dependency.
+2. **Cap fan-in.** A node advertises how many peers it will accept and **refuses
+   beyond that**. Invariant 7a already says *no node owes anyone service* — a hub
+   answering "full, try someone else" is behaving **correctly**, not failing.
+3. **Prefer many blind relays over one fat member.** A relay is a dumb pipe that sees
+   only ciphertext; a reachable **member** sees plaintext (it is in the realm). If
+   load must concentrate, better it concentrate on something that **knows nothing**.
+4. **Reachability must never become a ROLE.** No supernode flag, no privileged tier,
+   nothing others are configured to depend on. Reachability is *a property a node
+   happens to have today*, and the realm must keep working when it stops being true.
+
+### Relay cost is per-tenant, not global
+
+A sensor realm gossips a few hundred bytes a minute — a relay carrying that is
+**free**. A file-sharing realm is another matter entirely. So *"relays are
+acceptable"* is a **per-tenant** answer: for sensors and a small chat it is noise; for
+[0010](0010-file-sharing-in-realm.md) it is not.
+
 ## The strategy — hybrid, and staged
 
 What WireGuard and Tailscale do, for exactly these reasons:
