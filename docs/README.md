@@ -50,6 +50,7 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0010 — File sharing within a realm](tickets/0010-file-sharing-in-realm.md) — *optional tenant; forces chunking + GC*
 - [0011 — Sensor mesh & the leaf-node role](tickets/0011-sensor-mesh-leaf-nodes.md) — *optional tenant; forces the leaf contract*
 - [0012 — NAT traversal & transport strategy](tickets/0012-nat-traversal-and-transport.md) — **big feature.** Hole-punching decides whether the network works for real users at all
+- [0013 — Bootstrap profiles & rendezvous strategies](tickets/0013-bootstrap-profiles-and-rendezvous.md) — *no one-size-fits-all; the bootstrap channel must be reachable, not trusted*
 
 ## Build order (and why it is not the obvious one)
 

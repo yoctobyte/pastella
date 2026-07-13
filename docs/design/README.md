@@ -37,5 +37,14 @@ If you read nothing else:
   a lie. → [0005](../tickets/0005-offgrid-group-chat.md)
 - **Bringing the network UP is the real problem**, not taking it down. Zero nodes
   is how P2P projects die. → [0006](../tickets/0006-bootstrap-and-reachability.md)
+- **The bootstrap channel must be REACHABLE, not TRUSTED.** A poisoned hint just
+  fails the realm handshake, so bootstrap costs a wasted connection, never a
+  compromise. Therefore *anything carrying ~100 bytes of text can bootstrap the
+  network* — a pastebin, a tweet, a DNS record, a QR on a poster, a torrent
+  infohash — and no channel can be seized, because none is load-bearing.
+  → [0013](../tickets/0013-bootstrap-profiles-and-rendezvous.md)
+- **Every realm is its own infrastructure.** A realm's peer list is realm CONTENT,
+  gossiped like everything else. The only global thing is bootstrap — and even that
+  is a last resort. → [0006](../tickets/0006-bootstrap-and-reachability.md)
 - **Document architecture, never legal posture.**
   → [threat model §5](threat-model.md)
