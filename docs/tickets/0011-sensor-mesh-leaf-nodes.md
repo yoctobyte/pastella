@@ -6,6 +6,24 @@
   run on ESP32 yet.
 - **Design:** [substrate & tenants §3, §4](../design/substrate-and-tenants.md)
 
+## Two applications, not one
+
+The demo is a **pair**, and the split is the whole point — same realm, same protocol,
+different roles ([objects & wire](../design/objects-and-wire.md) capability flags):
+
+| | **1. sensor reader** (ESP32) | **2. logger / viewer** (PC) |
+|---|---|---|
+| does | reads a sensor, publishes | collects, stores, graphs, relays |
+| HELLO | `offers=yes, wants=no, serves=no` | all `yes` |
+| store | **outbox** — RAM ring buffer, freed on `ACK`, decimated under pressure | **archive** — disk, forever |
+| crypto | realm HMAC (no ECDSA — a chip cannot afford it) | same |
+
+**The reading format is sensor-agnostic**: a *name tag* and a *value*. A thermometer, a
+humidity sensor and a light meter differ only by a name and a unit string — so the app does
+not care what is plugged in. (Format: `sensor` + `value:i64` + `scale:i8` + `unit` — integer
+and decimal exponent, **no floats**, because the ESP32-C3 has no FPU and an I2C sensor hands
+you an integer anyway.)
+
 ## The demo — CROSS-SITE, not LAN-only
 
 An ESP32 (or a spare laptop) left at **each of several physical locations** — home,
