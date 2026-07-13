@@ -20,7 +20,7 @@ of this document: once you see it, you stop having the same argument over and ov
 | **Discovery / bootstrap** | LAN · invite hints · anchors · DNS/HTTPS · encrypted blob · BitTorrent · DHT | privacy & effort vs reach | the realm |
 | **Transport** | TCP · UDP · relay | simplicity vs NAT traversal & load | the deployment |
 | **Object authentication** | realm HMAC · per-author signature | **cost vs attribution** (see §2) | the realm |
-| **Retention** | archive (keep) · window · **outbox** (hold only until ACKed) | history vs footprint; an ESP32 holds readings only long enough to survive a network glitch, a PC logs and graphs them forever | the **node** |
+| **Retention** | archive (keep) · window · **outbox** (hold until ACKed) · **decimating outbox** (falling resolution with age — a blur, not a hole) | history vs footprint; an ESP32 holds readings only long enough to survive a network glitch, a PC logs and graphs them forever | the **node** |
 | **DHT participation** | opt in · opt out | helping others vs exposure & load | the **node** |
 | **Interest / role** | offers · wants · serves (3 flags in HELLO) | a leaf saves RAM and power by refusing offers; a collector keeps everything | the **node** |
 
