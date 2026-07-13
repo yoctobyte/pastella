@@ -162,7 +162,7 @@ Unchanged in shape from the working spike (`src/gossip_tcp.pas`), now typed:
 
 ```
 frame  = u32 length | body        # length-prefixed, as today
-verbs  = HELLO | HAVE | WANT | DATA | PING | PONG
+verbs  = HELLO | HAVE | WANT | DATA | ACK | PING | PONG
 ```
 
 - `HELLO` — version, realm claimed, and **capability flags** (below). Realm membership
@@ -208,6 +208,41 @@ nothing and serves nothing is still a full member — it just publishes.
 
 **These flags must exist in HELLO from v1.** Adding a field to a handshake later is a
 wire break; one byte now is free.
+
+### The leaf's store is an OUTBOX, not an archive — and that is why ACK exists
+
+Not a size difference. A **lifecycle** difference:
+
+| | ESP32 (leaf) | PC (collector) |
+|---|---|---|
+| what it holds | **readings nobody has taken yet** | **the archive** |
+| why | survive a network glitch until someone takes them | history, graphs, relaying to other collectors |
+| lifetime | **until acknowledged — then free it** | forever, or a policy window |
+| structure | ring buffer in RAM | files on disk |
+| on overflow | **drop oldest — the reading is LOST** | does not overflow |
+
+A collector's store answers *"what do I have?"*. A leaf's outbox answers *"what has
+nobody taken yet?"* **Different question, different data structure.**
+
+**`ACK(hash)`** closes the loop. A leaf cannot watch for the collector's `HAVE` — it
+declared `wants=no`, which is the entire point. So after a collector stores an object it
+**acknowledges** it, and the leaf frees that slot immediately and confidently.
+
+Five lines of protocol, and it is what makes the outbox *work* rather than merely exist.
+**The archive needs no ACK** — it is the one acknowledging. Asymmetric, like everything
+else here.
+
+#### Honest loss semantics
+
+If the outbox fills before any collector is reachable — a long outage — **readings are
+lost, oldest first.** That is correct behaviour, and it is stated rather than papered
+over:
+
+> **The network is not a database.**
+
+Sensor data tolerates gaps; a graph with a hole in it is fine. The alternative is writing
+every reading to flash and burning the chip's limited write endurance for data nobody
+will miss. *(A flash-backed outbox is possible — an option, never the default.)*
 
 ### PUSH — unsolicited DATA, for the tiny publisher
 
