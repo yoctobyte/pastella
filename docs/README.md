@@ -64,6 +64,7 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0012 — NAT traversal & transport strategy](tickets/0012-nat-traversal-and-transport.md) — **big feature.** Hole-punching decides whether the network works for real users at all
 - [0013 — Bootstrap profiles & rendezvous strategies](tickets/0013-bootstrap-profiles-and-rendezvous.md) — *no one-size-fits-all; the bootstrap channel must be reachable, not trusted*
 - **[0014 — v0.1: the smallest real network](tickets/0014-v0.1-two-laptops.md) — the only thing being built**
+- [0015 — UDP datagram transport](tickets/0015-udp-datagram-transport.md) — *the v0.2 path: don't rebuild TCP; gossip already IS the reliability layer*
 
 ## Build order (and why it is not the obvious one)
 
