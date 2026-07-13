@@ -2,6 +2,13 @@
 
 Minimal, file-based. No tracker, no tooling — just markdown under version control.
 
+## Right now
+
+**[0014 — v0.1: the smallest real network](tickets/0014-v0.1-two-laptops.md)** is the
+only active work: two or three laptops, different locations, gossiping readings,
+manual peer-add + LAN, running for a week. Everything else on this page is **thinking
+ahead of the code** — a menu, not a meal.
+
 ## Design documents
 
 Decisions that outlive any one ticket. **Read before touching the protocol** —
@@ -51,6 +58,7 @@ if a phase is blocked, mark `blocked` and say on what.
 - [0011 — Sensor mesh & the leaf-node role](tickets/0011-sensor-mesh-leaf-nodes.md) — *optional tenant; forces the leaf contract*
 - [0012 — NAT traversal & transport strategy](tickets/0012-nat-traversal-and-transport.md) — **big feature.** Hole-punching decides whether the network works for real users at all
 - [0013 — Bootstrap profiles & rendezvous strategies](tickets/0013-bootstrap-profiles-and-rendezvous.md) — *no one-size-fits-all; the bootstrap channel must be reachable, not trusted*
+- **[0014 — v0.1: the smallest real network](tickets/0014-v0.1-two-laptops.md) — the only thing being built**
 
 ## Build order (and why it is not the obvious one)
 

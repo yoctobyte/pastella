@@ -1,5 +1,35 @@
 # Design documents
 
+> ## ⚠️ STATUS: these are THOUGHTS, not commitments
+>
+> Written 2026-07-12/13, in one long design conversation, **before a single line of
+> new protocol code existed.** Treat almost all of it as **explored options**, not
+> settled architecture.
+>
+> **The only thing being built right now is [0014 — v0.1: the smallest real
+> network](../tickets/0014-v0.1-two-laptops.md)**: two or three laptops in different
+> places, gossiping readings, manual peer-add plus LAN discovery, running for a week.
+> Nothing else.
+>
+> **What is actually DECIDED** — a short list, and only because breaking these later
+> would be expensive or dishonest:
+>
+> 1. **The core is pure.** Clock, entropy, sockets are *inputs*, never calls.
+> 2. **Every object is signed and belongs to exactly one realm.**
+> 3. **Nodes store content only for realms they belong to.** (Never a filestore for
+>    strangers.)
+> 4. **The node key is not the membership key.**
+> 5. **No global reputation score.**
+> 6. **No unvalidated amplification.**
+> 7. **Document architecture, never legal posture.**
+>
+> **Everything else below is a menu, not a meal** — the DHT, trust flow, mailboxes,
+> NAT traversal, bootstrap channels, admission tiers, profiles. Each is a
+> *hypothesis*. v0.1 is the experiment that tells us which ones are real, and it will
+> be fewer than we think.
+>
+> Do not treat a document here as a decision just because it is well argued.
+
 Decisions that outlive any single ticket. **Read these before touching the
 protocol** — several of them exist because an earlier draft got it wrong, and the
 reasoning is more valuable than the conclusion.
