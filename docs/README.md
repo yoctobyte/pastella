@@ -24,6 +24,10 @@ Decisions that outlive any one ticket. **Read before touching the protocol** —
   app is payload types + a policy, with **zero** core changes — if it needs a core
   change, the core was wrong. Node roles (leaf / full / seed / mailbox / relay),
   the blind-infrastructure rule, and **the constitution** every tenant must obey.
+- [Realm profiles](design/realm-profiles.md) — **mechanism is universal; policy is per
+  realm; invariants are not negotiable.** Admission, discovery, transport, object
+  authentication, retention and DHT participation each have real drawbacks and no single
+  right answer — so each realm chooses, and the mechanism is implemented once.
 - [Architecture](design/architecture.md) — where the pure core ends and the I/O
   edge begins; what each layer may and may not know.
 - [Objects & wire](design/objects-and-wire.md) — one signed envelope, many payload

@@ -36,6 +36,7 @@ reasoning is more valuable than the conclusion.
 
 | doc | the question it answers |
 |---|---|
+| [Realm profiles](realm-profiles.md) | **Mechanism is universal; policy is per realm; invariants are not negotiable.** The pattern the design kept rediscovering — admission, discovery, transport, object authentication, retention and DHT participation are all per-realm CHOICES with real drawbacks, not one-size-fits-all answers. |
 | [Architecture](architecture.md) | Where is the line between the pure core and the I/O edge, and what may each layer know? |
 | [Objects & wire](objects-and-wire.md) | What *is* an object? One signed envelope, many payload types — the spine every other doc assumes. |
 | [Identity, membership & discovery](identity-membership-discovery.md) | Identity is free, so it must confer zero trust. The node key is not the membership key. The global layer is a phonebook, never a filestore. |

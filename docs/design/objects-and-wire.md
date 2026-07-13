@@ -52,7 +52,18 @@ different object.
   specifically forbids ([design §2](identity-membership-discovery.md)).
 - **`refs`** — causal predecessors. This is what makes the store a **DAG** rather
   than a bag, and it is how concurrent posts order themselves without consensus.
-- **`sig`** — every object is signed by its author. Unsigned objects do not exist.
+- **`auth`** — **how** the object is authenticated. `1 = REALM_HMAC` (HmacSha256 under
+  the realm key — fast, ESP32-viable, **no attribution**: any member can forge any
+  member's objects). `2 = AUTHOR_SIG` (ECDSA — attribution and revocation, but **~1–2 s
+  per object on an ESP32**).
+
+  **Both are correct, for different realms** — a sensor mesh of your own devices wants
+  the HMAC; a chat wants signatures. This is a **per-realm policy**
+  ([realm profiles](realm-profiles.md)), and the discriminator byte is what lets them
+  coexist instead of forking the format. **One byte, free today, a flag-day migration if
+  omitted.**
+- **`sig` / `mac`** — every object is authenticated *somehow*. **Unauthenticated objects
+  do not exist** — that part is an invariant, not a policy.
 
 ### What is deliberately NOT in the envelope
 
