@@ -21,8 +21,11 @@ different roles ([objects & wire](../design/objects-and-wire.md) capability flag
 **The reading format is sensor-agnostic**: a *name tag* and a *value*. A thermometer, a
 humidity sensor and a light meter differ only by a name and a unit string — so the app does
 not care what is plugged in. (Format: `sensor` + `value:i64` + `scale:i8` + `unit` — integer
-and decimal exponent, **no floats**, because the ESP32-C3 has no FPU and an I2C sensor hands
-you an integer anyway.)
+and decimal exponent. **Not** because the chip lacks an FPU — frank2 ships `softfloat`, and
+at one reading per 30 s that cost is irrelevant — but because integers are **exact** and
+**deterministic**: `0.1` is not representable in binary float, and content-addressing hashes
+the bytes, so any float that could round differently on a different path is a *different
+object*. A float payload is fine for an app that wants one; the sensor app does not.)
 
 ## The demo — CROSS-SITE, not LAN-only
 
