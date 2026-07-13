@@ -6,11 +6,57 @@
   run on ESP32 yet.
 - **Design:** [substrate & tenants §3, §4](../design/substrate-and-tenants.md)
 
-## The demo
+## The demo — CROSS-SITE, not LAN-only
 
-ESP32 sensors self-assemble into a realm via LAN beacons. Readings gossip as
-ordinary signed objects. Your laptop is **just another peer** that happens to draw
-graphs. No broker, no MQTT server, no cloud, no pairing app.
+An ESP32 (or a spare laptop) left at **each of several physical locations** — home,
+work, a friend's place — each with a temperature sensor. They gossip readings into
+one realm **across the internet**. Your laptop is **just another peer** that happens
+to draw graphs. No broker, no MQTT server, no cloud, no pairing app, no account.
+
+This is not the LAN demo. It is the real thing, and it is the shape the whole
+substrate was designed for.
+
+### Why it needs almost nothing
+
+**Outbound connections traverse NAT for free.** No hole-punching, no STUN, no relay.
+NAT is only a problem when *two unreachable peers* must talk directly.
+
+So if **one** member of the realm is reachable — a home box, a laptop that stays put,
+a EUR 3/month VPS — every sensor at every site simply **connects outward** to it.
+Gossip flows.
+
+- **No DHT** ([0004](0004-discovery-dht.md)).
+- **No NAT traversal** ([0012](0012-nat-traversal-and-transport.md)).
+- **No relays, no seeds, no global anything.**
+- One reachable member is the entire answer.
+
+That is a star topology at first, and that is fine: the anchor is a **member**,
+storing its own realm's content — not a relay for strangers, not a tracker
+([0013 §4](0013-bootstrap-profiles-and-rendezvous.md)). Direct peer links and
+hole-punching are a later *optimisation*, never a prerequisite.
+
+### Zero-config, honestly defined
+
+A device must learn *something*, or it cannot tell your realm from a stranger's. What
+we actually mean:
+
+> **Configured once at pairing; never configured again.** No IP addresses, no
+> per-site setup — and it survives the ISP changing your address.
+
+The trick: **give the device a NAME, never an address.** At pairing (QR / factory
+key) it receives the realm credential plus a rendezvous *name*. Then:
+
+- home IP changes → dynamic DNS updates, the device re-resolves. Nothing to do.
+- move a sensor between sites → plug it in. It phones home.
+- add a sensor → pair it once.
+
+frank2 already ships a DNS client, so this is nearly free.
+
+**And with no domain at all:** the anchor publishes its address as an **encrypted
+blob at a URL derived from the realm key**
+([0013 §3](0013-bootstrap-profiles-and-rendezvous.md)) — a pastebin, GitHub Pages, an
+S3 bucket. The host sees an opaque path and opaque bytes; outsiders cannot even find
+the path. Zero leak, zero infrastructure of our own.
 
 The pitch, and it is not a small one: **the same binary protocol on a $3 chip and
 on a laptop.** No Go or Rust P2P stack can do this — they do not fit. It is the
@@ -41,7 +87,8 @@ weather station is the excuse.
 ## Shape
 
 - **Pairing**: factory key + QR, or a button-press window. Same invite object as
-  [0006](0006-bootstrap-and-reachability.md), scoped to a device.
+  [0006](0006-bootstrap-and-reachability.md), scoped to a device — and it carries a
+  rendezvous NAME, never an address.
 - **Objects**: `READING` — tiny, signed, realm-scoped.
 - **Retention**: ring buffer. Old readings are dropped, and that is *correct*, not
   a degradation. A late peer must not mistake a pruned tail for withheld data
@@ -64,6 +111,10 @@ constant silently wrong on ESP32 while passing every test on the dev box. Fixed.
 
 ## Acceptance
 
+- Sensors at **two or more physical sites** (different NATs, different ISPs) gossip
+  into one realm, with **no DHT, no hole-punching and no relay** — only one reachable
+  member.
+- The realm survives the anchor's IP changing, with no device reconfigured.
 - A leaf joins a realm, publishes readings, and **never** holds a full DAG.
 - The desktop node is *just a peer* — no privileged role, no server.
 - Power-cycle a sensor: it rejoins and resumes without back-filling history.

@@ -61,6 +61,28 @@ is no chokepoint to seize, because no channel is load-bearing and none is truste
 is why channel choice is *privacy* policy, not *security* policy — and therefore
 per-realm.
 
+### And the leak can be closed too: the encrypted rendezvous blob
+
+A public channel need not leak *anything*, if the realm publishes an opaque blob at
+an opaque path:
+
+```
+url  = <any dumb static host> / H(realmKey || epoch)
+body = Seal(realmKey, [addresses])
+```
+
+The host — a pastebin, GitHub Pages, an S3 bucket, somebody's blog — sees **an opaque
+path and opaque bytes**. It cannot tell which realm it is, who belongs to it, or what
+the bytes mean. An outsider cannot even *find* the path without the realm key, and it
+**rotates by epoch**.
+
+So: bootstrap over **public infrastructure we neither run nor trust**, with **no
+metadata leak**, and **no infrastructure of our own**. frank2 already ships HTTP +
+TLS 1.3, so the cost is close to zero.
+
+This is the general form of "leave a note where only your friends know to look" — and
+it is why *anything* that can host ~100 bytes is enough.
+
 ## 4. A bootstrap peer is NOT a tracker
 
 The distinction matters, because it lets us accept the first while refusing the
