@@ -6,8 +6,13 @@ Minimal, file-based. No tracker, no tooling — just markdown under version cont
 
 **[0014 — v0.1: the smallest real network](tickets/0014-v0.1-two-laptops.md)** is the
 only active work: two or three laptops, different locations, gossiping readings,
-manual peer-add + LAN, running for a week. Everything else on this page is **thinking
-ahead of the code** — a menu, not a meal.
+manual peer-add + LAN, running for a week.
+
+→ **[The v0.1 implementation plan](plans/v0.1-implementation-plan.md)** is
+self-contained: start a fresh session, read only that, and build. It says explicitly
+*not* to read the rest of this page first — the design docs are **thinking ahead of
+the code**, a menu rather than a meal, and they will pull you into decisions v0.1
+deliberately does not make.
 
 ## Design documents
 
