@@ -52,6 +52,53 @@ right formulation is transport-independent:
 were not wrong — they were UDP-specific, and were discarded prematurely when the
 design went TCP-only.)*
 
+## The elephant is smaller than it looks: gossip needs CONNECTIVITY, not a mesh
+
+Before reaching for UDP, notice what anti-entropy actually requires.
+
+**Two peers behind NAT never have to talk to each other directly.** If both can reach
+*any* common member, objects flow A → C → B. **Epidemic convergence happens over any
+CONNECTED graph, not a complete one.** This is not a workaround — it is how gossip
+works, and it is why this is not a WebRTC-shaped problem where a direct path is
+mandatory.
+
+> **The requirement is not "every pair connects." It is "the graph stays connected"**
+> — which **one** reachable member achieves for an entire realm.
+
+Direct mutual-NAT links are therefore an **optimisation** (latency, and load on the
+reachable node), never a correctness requirement.
+
+### Correction: TCP punching is unreliable, not impossible
+
+TCP simultaneous-open (RFC 5128) does traverse many NATs, and Linux supports it. But
+it works for roughly half of NAT pairs in the wild and **near-zero against symmetric
+NAT or CGNAT** — unreliable enough that **you must not build on it**. The practical
+conclusion stands; the absolute ("impossible") does not.
+
+## The cheap ladder: become REACHABLE, and keep TCP
+
+The trick is not punching a hole *through* NAT. It is **making yourself reachable**,
+so the other side simply dials out — which TCP does perfectly.
+
+| rung | mechanism | cost | fails when |
+|---|---|---|---|
+| **1** | **IPv6** — no NAT at all, just a firewall pinhole | trivial | no v6 |
+| **2** | **Port mapping**: `NAT-PMP` / `PCP` (a few UDP packets to the gateway) or `UPnP-IGD` (SSDP + SOAP-over-HTTP — frank2 already ships an HTTP client) | **small** | **CGNAT** |
+| **3** | **Relay** — blind byte-forwarding | bandwidth | never |
+| **4** | **UDP data path + hole punching** | **large** — needs our own reliability layer | rarely |
+
+**Rungs 1–2 convert a mutual-NAT pair into the easy case:** one side becomes
+reachable, and plain outbound TCP works. That is far cheaper than abandoning TCP, and
+it composes with everything already built.
+
+And because a realm needs only **a few** reachable members (not all of them), rung 2
+is likely sufficient in practice for the deployments we care about. **Rung 4 is a
+last resort, not the plan.**
+
+*(An earlier draft of this ticket claimed TCP-only would push "a large fraction" of
+traffic through relays. That over-stated it: it ignored port mapping, and it ignored
+that gossip needs connectivity rather than a mesh.)*
+
 ## The strategy — hybrid, and staged
 
 What WireGuard and Tailscale do, for exactly these reasons:
