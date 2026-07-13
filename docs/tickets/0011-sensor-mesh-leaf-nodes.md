@@ -99,6 +99,17 @@ weather station is the excuse.
   is [§7a](../design/identity-membership-discovery.md)'s problem again, arriving
   from a third direction, and further evidence it must be solved once in the core.
 
+## The crypto budget on a chip (do not skip this)
+
+- **Sealed datagrams are LIGHTER than HTTPS on an ESP32**, not heavier: TLS costs
+  ~16–40 KB of RAM per session versus <1 KB for ours, and its per-record AEAD is the
+  same work we would do anyway. See [0015 §4a](0015-udp-datagram-transport.md).
+- **The real cost is ECDSA.** ~12 ms per signature on a desktop implies **~1–2 s on an
+  ESP32-C3** (160 MHz, 32-bit). **Do not sign every reading.** Use a realm-key HMAC for
+  readings (the chip has a SHA accelerator) and keep ECDSA for membership/certs, which
+  are rare. Or batch-sign. Or use the C3/S3 **ECC accelerator**.
+- **Measure before choosing.** These are estimates.
+
 ## Blocked on
 
 `p256field` core-dumps on riscv32 (frank2 `bug-riscv32-p256field-coredump`), and

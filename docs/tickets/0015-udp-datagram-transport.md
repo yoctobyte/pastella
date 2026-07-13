@@ -109,6 +109,52 @@ Keep datagrams **≤ 1200 bytes** — no fragmentation, no PMTU discovery, no ga
 connection ID · handshake retransmit · keepalive · cookie. **This is WireGuard's
 design**, and it is a few hundred lines. Not TLS, not QUIC.
 
+## 4a. ESP32: sealed datagrams are LIGHTER than HTTPS, not heavier
+
+The IDF supports HTTPS, so it is tempting to think per-packet AEAD is the expensive
+option. **It is the other way round.**
+
+TLS is **handshake (asymmetric + certificate parsing) + per-record AEAD**. That
+per-record AEAD is *exactly the work we would be doing anyway*. Using HTTPS does not
+save the symmetric crypto — it **adds** a handshake and a large buffer on top of it.
+
+On a ~300 KB chip, the buffer is decisive:
+
+| | RAM per session | handshake |
+|---|---|---|
+| **mbedTLS / HTTPS** | **~16–40 KB** (record buffers, cert chain) | RSA/ECDSA + cert parsing |
+| **sealed datagrams (ours)** | **< 1 KB** (session key + replay window) | HMAC challenge-response |
+
+An ESP32 can afford *one or two* TLS sessions. It can afford **dozens** of ours. For a
+gossip node with several peers that is not a tuning detail — it is work-or-not-work.
+
+**And the symmetric crypto is noise.** ChaCha20-Poly1305 in software on a C3 runs at a
+few MB/s; a reading is a few hundred bytes, every 30 s. Sealing 1 KB costs on the order
+of a **millisecond**. It only becomes interesting if file transfer lands (§5, Phase 2).
+
+## 4b. The REAL ESP32 cost is ASYMMETRIC crypto — signing every object
+
+This is the one that will actually hurt, and it is easy to miss.
+
+**ECDSA-P256 signing is ~12 ms on a desktop** (after frank2's 25x work). An ESP32-C3 is
+~160 MHz, 32-bit, no 64-bit registers — expect **~1–2 seconds per signature**. If every
+reading is individually signed, **the chip spends its life signing.**
+
+Options, in order of preference:
+
+1. **Symmetric MAC for readings.** Authenticate objects with the *realm key*
+   (HMAC-SHA256 — fast, and the ESP32 has a **SHA accelerator**). You lose per-author
+   attribution *inside* the realm — but for a sensor mesh, *"this came from a realm
+   member"* is usually all that is wanted. **Reserve ECDSA for membership/certs**,
+   which are rare.
+2. **Batch-sign.** One signed object covering N readings, rather than N signatures.
+3. **The ESP32-C3/S3 ECC accelerator** — hardware P-256 point multiplication. Cheap
+   ECDSA, but it means PAL hooks into IDF, and it is chip-specific.
+
+> **MEASURE FIRST.** The numbers above are estimates. The difference between 200 ms and
+> 2 s changes the answer — but the *design* conclusion already holds: keep the sealed
+> datagrams; do not ECDSA-sign every reading on a chip.
+
 ## 5. Phasing
 
 **Phase 1 — sensors and chat: no ARQ at all.**
